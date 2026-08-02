@@ -47,10 +47,36 @@ function score(match) {
 
 function formatDate(value) {
   if (!value) return "Termin naknadno";
-  return new Intl.DateTimeFormat("bs-BA", {
-    dateStyle: "medium",
-    timeStyle: "short"
-  }).format(new Date(value));
+
+  const date = new Date(value);
+  const day = date.getDate();
+  const month = date.getMonth() + 1;
+  const year = date.getFullYear();
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+
+  return `${day}.${month}.${year}. u ${hours}:${minutes}`;
+}
+
+function formatDay(value) {
+  if (!value) return "";
+
+  const date = new Date(value);
+  return `${date.getDate()}.${date.getMonth() + 1}.${date.getFullYear}.`;
+}
+
+function formatTime(value) {
+  if (!value) return "Termin naknadno";
+
+  const date = new Date(value);
+  return `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+}
+
+function localDateKey(value) {
+  if (!value) return "";
+
+  const date = new Date(value);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
 
 function statusLabel(status) {
@@ -197,6 +223,48 @@ export default function App() {
   const featuredMatch = liveMatch || upcomingMatches[0] || matches[0];
   const latestResult = finishedMatches[0];
 
+  const featuredDay = useMemo(() => {
+    const datedMatches = matches
+      .filter((match) => match.scheduled_at)
+      .slice()
+      .sort((a, b) => new Date(a.scheduled_at) - new Date(b.scheduled_at));
+
+    if (!datedMatches.length) {
+      return {
+        title: "Sljedeće utakmice",
+        date: "",
+        matches: upcomingMatches.slice(0, 3)
+      };
+    }
+
+    const todayKey = localDateKey(new Date());
+    const todayMatches = datedMatches.filter(
+      (match) => localDateKey(match.scheduled_at) === todayKey
+    );
+
+    if (todayMatches.length) {
+      return {
+        title: "Današnje utakmice",
+        date: formatDay(todayMatches[0].scheduled_at),
+        matches: todayMatches
+      };
+    }
+
+    const nextMatch = datedMatches.find(
+      (match) => new Date(match.scheduled_at) >= new Date()
+    ) || datedMatches[0];
+
+    const nextKey = localDateKey(nextMatch.scheduled_at);
+
+    return {
+      title: "Sljedeći dan turnira",
+      date: formatDay(nextMatch.scheduled_at),
+      matches: datedMatches.filter(
+        (match) => localDateKey(match.scheduled_at) === nextKey
+      )
+    };
+  }, [matches, upcomingMatches]);
+
   return (
     <div className="app">
       <header className="siteHeader">
@@ -224,8 +292,8 @@ export default function App() {
             <p className="heroEyebrow">Tradicionalni malonogometni turnir</p>
 
             <h1 className="heroTitle">
-              <span>TURNIR</span>
-              <strong>SD DUBRAVKA</strong>
+              <span>TRADICIONALNI MALONOGOMETNI TURNIR</span>
+              <strong>DUBRAVKA</strong>
               <em>2026</em>
             </h1>
 
@@ -234,13 +302,22 @@ export default function App() {
             </p>
 
             <div className="heroActions">
-              <button className="heroPrimary" onClick={() => setTab("utakmice")}>
+              <button
+                className={tab === "utakmice" ? "heroAction active" : "heroAction"}
+                onClick={() => setTab("utakmice")}
+              >
                 Pogledaj utakmice
               </button>
-              <button className="heroSecondary" onClick={() => setTab("rezultati")}>
+              <button
+                className={tab === "rezultati" ? "heroAction active" : "heroAction"}
+                onClick={() => setTab("rezultati")}
+              >
                 Rezultati
               </button>
-              <button className="heroSecondary" onClick={() => setTab("strijelci")}>
+              <button
+                className={tab === "strijelci" ? "heroAction active" : "heroAction"}
+                onClick={() => setTab("strijelci")}
+              >
                 Strijelci
               </button>
             </div>
@@ -288,7 +365,7 @@ export default function App() {
 
         {tab === "pregled" && (
           <HomeDashboard
-            featuredMatch={featuredMatch}
+            featuredDay={featuredDay}
             latestResult={latestResult}
             scorers={scorers}
             setTab={setTab}
@@ -366,15 +443,12 @@ export default function App() {
   );
 }
 
-function HomeDashboard({ featuredMatch, latestResult, scorers, setTab }) {
+function HomeDashboard({ featuredDay, latestResult, scorers, setTab }) {
   return (
     <>
       <section className="dashboardGrid">
-        <FeatureMatchCard
-          title={featuredMatch?.status === "live" ? "Utakmica uživo" : "Sljedeća utakmica"}
-          icon="▣"
-          match={featuredMatch}
-          action="Pogledaj raspored"
+        <DayMatchesCard
+          featuredDay={featuredDay}
           onAction={() => setTab("utakmice")}
         />
 
@@ -423,6 +497,42 @@ function HomeDashboard({ featuredMatch, latestResult, scorers, setTab }) {
         </div>
       </section>
     </>
+  );
+}
+
+function DayMatchesCard({ featuredDay, onAction }) {
+  return (
+    <section className="sportCard dayMatchesCard">
+      <CardTitle icon="▣" title={featuredDay.title} />
+
+      {featuredDay.date && (
+        <div className="dayMatchesDate">{featuredDay.date}</div>
+      )}
+
+      {featuredDay.matches.length ? (
+        <div className="dayMatchesList">
+          {featuredDay.matches.map((match) => (
+            <article className="dayMatchRow" key={match.id}>
+              <time>{formatTime(match.scheduled_at)}</time>
+
+              <div className="dayMatchTeams">
+                <strong>{matchName(match, "home")}</strong>
+                <span>{score(match)}</span>
+                <strong>{matchName(match, "away")}</strong>
+              </div>
+
+              <small className={`dayMatchStatus ${match.status || "scheduled"}`}>
+                {statusLabel(match.status)}
+              </small>
+            </article>
+          ))}
+        </div>
+      ) : (
+        <EmptyText>Utakmice još nemaju unesene termine.</EmptyText>
+      )}
+
+      <CardButton onClick={onAction}>Cijeli raspored</CardButton>
+    </section>
   );
 }
 
