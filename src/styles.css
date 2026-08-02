@@ -173,17 +173,8 @@ button:focus-visible, input:focus-visible, select:focus-visible {
   text-align: center;
 }
 
-.heroEyebrow {
-  margin: 0 0 13px;
-  color: var(--gold-bright);
-  font-size: .75rem;
-  font-weight: 900;
-  letter-spacing: .18em;
-  text-transform: uppercase;
-}
-
 .heroTitle {
-  margin: 0;
+  margin: 8px 0 0;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -522,7 +513,11 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 }
 
 .dayMatchRow time {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   color: var(--gold-bright);
+  font-size: 1rem;
   font-weight: 900;
 }
 
@@ -551,18 +546,46 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 }
 
 .dayMatchStatus {
-  color: var(--muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #a9b6c2;
   font-size: .58rem;
   font-weight: 900;
   letter-spacing: .07em;
+  white-space: nowrap;
+}
+
+.dayMatchStatusDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--gold-bright);
+  box-shadow: 0 0 8px rgba(245, 199, 78, .45);
 }
 
 .dayMatchStatus.live {
-  color: var(--danger);
+  color: #fff;
+}
+
+.dayMatchStatus.live .dayMatchStatusDot {
+  background: var(--danger);
+  box-shadow: 0 0 9px rgba(255, 90, 95, .65);
+  animation: pulse 1.4s infinite;
 }
 
 .dayMatchStatus.finished {
-  color: var(--success);
+  color: #b9e8cf;
+}
+
+.dayMatchStatus.finished .dayMatchStatusDot {
+  background: var(--success);
+  box-shadow: 0 0 8px rgba(39, 201, 120, .5);
+}
+
+.dayMatchStatus.postponed .dayMatchStatusDot {
+  background: #8793a0;
+  box-shadow: none;
 }
 
 .topScorers { margin: 16px 0; }
@@ -1013,10 +1036,6 @@ footer {
     padding: 94px 0 50px;
   }
 
-  .heroEyebrow {
-    font-size: .63rem;
-    letter-spacing: .13em;
-  }
 
   .heroTitle span {
     max-width: 330px;

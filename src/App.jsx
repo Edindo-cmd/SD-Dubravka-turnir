@@ -62,7 +62,11 @@ function formatDay(value) {
   if (!value) return "";
 
   const date = new Date(value);
-  return `${date.getDate()}.${date.getMonth() + 1}.${date.getFullYear}.`;
+  const day = date.getDate();
+  const month = date.getMonth() + 1;
+  const year = date.getFullYear();
+
+  return `${day}.${month}.${year}.`;
 }
 
 function formatTime(value) {
@@ -289,8 +293,6 @@ export default function App() {
           <div className="heroPattern" aria-hidden="true" />
 
           <div className="heroContent">
-            <p className="heroEyebrow">Tradicionalni malonogometni turnir</p>
-
             <h1 className="heroTitle">
               <span>TRADICIONALNI MALONOGOMETNI TURNIR</span>
               <strong>DUBRAVKA</strong>
@@ -513,7 +515,7 @@ function DayMatchesCard({ featuredDay, onAction }) {
         <div className="dayMatchesList">
           {featuredDay.matches.map((match) => (
             <article className="dayMatchRow" key={match.id}>
-              <time>{formatTime(match.scheduled_at)}</time>
+              <time><span aria-hidden="true">◷</span>{formatTime(match.scheduled_at)}</time>
 
               <div className="dayMatchTeams">
                 <strong>{matchName(match, "home")}</strong>
@@ -522,6 +524,7 @@ function DayMatchesCard({ featuredDay, onAction }) {
               </div>
 
               <small className={`dayMatchStatus ${match.status || "scheduled"}`}>
+                <span className="dayMatchStatusDot" />
                 {statusLabel(match.status)}
               </small>
             </article>
