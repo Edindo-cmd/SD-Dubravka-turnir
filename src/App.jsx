@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { supabase } from "./supabase.js";
 
+const ADMIN_EMAILS = ["elizde89@gmail.com"];
+
 const fallbackMatches = [
   ["Kafadar Gnojnice", "Barber shop Sema"],
   ["Bobanovo", "Barber shop Šule"],
@@ -22,8 +24,17 @@ const fallbackMatches = [
   home_score: null,
   away_score: null,
   status: "scheduled",
-  scheduled_at: null
+  scheduled_at: null,
+  evening: null
 }));
+
+const NAV_ITEMS = [
+  ["pregled", "⌂", "Početna"],
+  ["utakmice", "▣", "Raspored"],
+  ["rezultati", "🏆", "Rezultati"],
+  ["strijelci", "◎", "Strijelci"],
+  ["admin", "♙", "Admin"]
+];
 
 function matchName(match, side) {
   const team = side === "home" ? match.home_team : match.away_team;
@@ -32,16 +43,33 @@ function matchName(match, side) {
 }
 
 function score(match) {
-  if (match.home_score === null || match.away_score === null) return "vs";
+  if (match.home_score === null || match.away_score === null) return "VS";
   return `${match.home_score} : ${match.away_score}`;
 }
 
-function timeText(value) {
+function formatDate(value) {
   if (!value) return "Termin naknadno";
   return new Intl.DateTimeFormat("bs-BA", {
     dateStyle: "medium",
     timeStyle: "short"
   }).format(new Date(value));
+}
+
+function statusLabel(status) {
+  if (status === "live") return "UŽIVO";
+  if (status === "finished") return "ZAVRŠENO";
+  if (status === "postponed") return "ODGOĐENO";
+  return "ZAKAZANO";
+}
+
+function teamInitials(name) {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase();
 }
 
 export default function App() {
@@ -53,33 +81,41 @@ export default function App() {
   const [session, setSession] = useState(null);
   const [adminAllowed, setAdminAllowed] = useState(false);
   const [notice, setNotice] = useState(
-    supabase ? "" : "Aplikacija je spremna. Dodaj Supabase varijable u Vercelu za rad sa bazom."
+    supabase ? "" : "Dodaj Supabase varijable u Vercelu za povezivanje s bazom."
   );
 
   async function loadData() {
     if (!supabase) return;
-    const [m, t, p, g] = await Promise.all([
-      supabase.from("matches").select(`
-        *,
-        home_team:teams!matches_home_team_id_fkey(id,name),
-        away_team:teams!matches_away_team_id_fkey(id,name),
-        evening:evenings(id,title,event_date)
-      `).order("round_order").order("match_number"),
+
+    const [matchesResult, teamsResult, playersResult, goalsResult] = await Promise.all([
+      supabase
+        .from("matches")
+        .select(`
+          *,
+          home_team:teams!matches_home_team_id_fkey(id,name),
+          away_team:teams!matches_away_team_id_fkey(id,name),
+          evening:evenings(id,title,event_date)
+        `)
+        .order("round_order")
+        .order("match_number"),
       supabase.from("teams").select("*").order("name"),
       supabase.from("players").select("*, team:teams(id,name)").order("name"),
       supabase.from("goals").select("*, player:players(id,name), team:teams(id,name)")
     ]);
 
-    const firstError = [m, t, p, g].find((r) => r.error)?.error;
+    const firstError = [matchesResult, teamsResult, playersResult, goalsResult]
+      .find((result) => result.error)?.error;
+
     if (firstError) {
-      setNotice(`Baza još nije spremna: ${firstError.message}`);
+      setNotice(`Greška baze: ${firstError.message}`);
       return;
     }
 
-    if (m.data?.length) setMatches(m.data);
-    setTeams(t.data || []);
-    setPlayers(p.data || []);
-    setGoals(g.data || []);
+    if (matchesResult.data?.length) setMatches(matchesResult.data);
+    setTeams(teamsResult.data || []);
+    setPlayers(playersResult.data || []);
+    setGoals(goalsResult.data || []);
+    setNotice("");
   }
 
   useEffect(() => {
@@ -87,7 +123,8 @@ export default function App() {
     if (!supabase) return;
 
     supabase.auth.getSession().then(({ data }) => setSession(data.session || null));
-    const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, nextSession) => {
       setSession(nextSession);
     });
 
@@ -95,10 +132,11 @@ export default function App() {
       .channel("turnir-live")
       .on("postgres_changes", { event: "*", schema: "public", table: "matches" }, loadData)
       .on("postgres_changes", { event: "*", schema: "public", table: "goals" }, loadData)
+      .on("postgres_changes", { event: "*", schema: "public", table: "players" }, loadData)
       .subscribe();
 
     return () => {
-      data.subscription.unsubscribe();
+      authListener.subscription.unsubscribe();
       supabase.removeChannel(channel);
     };
   }, []);
@@ -109,18 +147,22 @@ export default function App() {
         setAdminAllowed(false);
         return;
       }
+
       const { data } = await supabase
         .from("admins")
         .select("email")
         .eq("email", session.user.email.toLowerCase())
         .maybeSingle();
+
       setAdminAllowed(Boolean(data));
     }
+
     checkAdmin();
   }, [session]);
 
   const scorers = useMemo(() => {
     const map = new Map();
+
     for (const goal of goals) {
       const name = goal.player?.name || goal.player_name_override || "Nepoznat igrač";
       const team = goal.team?.name || "";
@@ -129,135 +171,116 @@ export default function App() {
       item.goals += Number(goal.quantity || 1);
       map.set(key, item);
     }
-    return [...map.values()].sort((a, b) => b.goals - a.goals || a.name.localeCompare(b.name));
+
+    return [...map.values()].sort(
+      (a, b) => b.goals - a.goals || a.name.localeCompare(b.name)
+    );
   }, [goals]);
+
+  const upcomingMatches = useMemo(
+    () =>
+      matches
+        .filter((match) => match.status !== "finished")
+        .sort((a, b) => {
+          if (!a.scheduled_at && !b.scheduled_at) return (a.match_number || 0) - (b.match_number || 0);
+          if (!a.scheduled_at) return 1;
+          if (!b.scheduled_at) return -1;
+          return new Date(a.scheduled_at) - new Date(b.scheduled_at);
+        }),
+    [matches]
+  );
+
+  const finishedMatches = useMemo(
+    () => matches.filter((match) => match.status === "finished").slice().reverse(),
+    [matches]
+  );
+
+  const liveMatch = matches.find((match) => match.status === "live");
+  const featuredMatch = liveMatch || upcomingMatches[0] || matches[0];
+  const latestResult = finishedMatches[0];
 
   return (
     <div className="app">
-      <header className="hero">
-        <div className="heroGlow heroGlowOne" />
-        <div className="heroGlow heroGlowTwo" />
-        <div className="heroShade" />
-        <div className="heroInner">
-          <div className="heroBrand">
-            <div className="logoFrame">
-              <img src="/logo-sd-dubravka.png" alt="Grb Sportskog društva Dubravka" />
-            </div>
+      <header className="siteHeader">
+        <div className="topBar">
+          <button className="brandButton" onClick={() => setTab("pregled")}>
+            <img src="/logo-sd-dubravka.png" alt="SD Dubravka" />
+            <span>
+              <small>Sportsko društvo</small>
+              <strong>Dubravka</strong>
+            </span>
+          </button>
 
-            <div className="heroCopy">
-              <p className="kicker">Sportsko društvo Dubravka</p>
-              <h1>Turnir SD Dubravka</h1>
-              <p className="lead">Raspored, rezultati i strijelci — brzo, pregledno i uživo.</p>
+          <button className="adminTopButton" onClick={() => setTab("admin")}>
+            🔒 Admin
+          </button>
+        </div>
 
-              <div className="heroActions">
-                <button className="heroPrimary" onClick={() => setTab("utakmice")}>
-                  Pogledaj utakmice
-                </button>
-                <button className="heroSecondary" onClick={() => setTab("strijelci")}>
-                  Lista strijelaca
-                </button>
-              </div>
-
-              <div className="heroStats">
-                <div><strong>{matches.length}</strong><span>utakmica</span></div>
-                <div><strong>{teams.filter((team) => !team.is_placeholder).length || 22}</strong><span>ekipe</span></div>
-                <div><strong>{scorers.length}</strong><span>strijelaca</span></div>
-              </div>
-            </div>
+        <div className="hero">
+          <div className="heroShade" />
+          <div className="heroContent">
+            <img className="heroLogo" src="/logo-sd-dubravka.png" alt="Grb SD Dubravka" />
+            <p className="kicker">Zvanična stranica turnira</p>
+            <h1>Turnir <span>SD Dubravka</span></h1>
+            <p className="heroSubtitle">
+              Raspored <i>•</i> Rezultati <i>•</i> Strijelci
+            </p>
           </div>
         </div>
       </header>
 
-      <nav className="nav">
-        {[
-          ["pregled", "Pregled"],
-          ["utakmice", "Utakmice"],
-          ["strijelci", "Strijelci"],
-          ["ekipe", "Ekipe"],
-          ["admin", "Admin"]
-        ].map(([id, label]) => (
-          <button key={id} className={tab === id ? "active" : ""} onClick={() => setTab(id)}>
+      <nav className="desktopNav">
+        {NAV_ITEMS.map(([id, icon, label]) => (
+          <button
+            key={id}
+            className={tab === id ? "active" : ""}
+            onClick={() => setTab(id)}
+          >
+            <span>{icon}</span>
             {label}
           </button>
         ))}
+        <button
+          className={tab === "ekipe" ? "active" : ""}
+          onClick={() => setTab("ekipe")}
+        >
+          <span>👥</span>
+          Ekipe
+        </button>
       </nav>
 
-      <main className="wrap">
+      <main className="mainContent">
         {notice && <div className="notice">{notice}</div>}
 
         {tab === "pregled" && (
-          <section>
-            <div className="sectionTitle">
-              <div><span>Aktuelno</span><h2>Turnirski pregled</h2></div>
-              <b>LIVE</b>
-            </div>
-            <div className="grid three">
-              <div className="card">
-                <h3>Sljedeće utakmice</h3>
-                {matches.slice(0, 4).map((m) => <Match key={m.id} match={m} />)}
-              </div>
-              <div className="card">
-                <h3>Posljednji rezultati</h3>
-                {matches.filter((m) => m.status === "finished").slice(-4).reverse().map((m) => (
-                  <Match key={m.id} match={m} />
-                ))}
-                {!matches.some((m) => m.status === "finished") && <p className="muted">Rezultati još nisu uneseni.</p>}
-              </div>
-              <div className="card">
-                <h3>Najbolji strijelci</h3>
-                {scorers.slice(0, 5).map((s, i) => (
-                  <div className="rank" key={`${s.name}-${s.team}`}>
-                    <span>{i + 1}. <strong>{s.name}</strong><small>{s.team}</small></span>
-                    <b>{s.goals}</b>
-                  </div>
-                ))}
-                {!scorers.length && <p className="muted">Strijelci još nisu uneseni.</p>}
-              </div>
-            </div>
-          </section>
+          <HomeDashboard
+            featuredMatch={featuredMatch}
+            latestResult={latestResult}
+            scorers={scorers}
+            setTab={setTab}
+          />
         )}
 
         {tab === "utakmice" && (
-          <section>
-            <div className="sectionTitle"><div><span>Eliminacijski sistem</span><h2>Utakmice</h2></div></div>
-            <div className="card">
-              {matches.map((m) => <Match key={m.id} match={m} />)}
-            </div>
-          </section>
+          <MatchesPage
+            title="Raspored utakmica"
+            subtitle="Sve zakazane i predstojeće utakmice"
+            matches={matches.filter((match) => match.status !== "finished")}
+          />
         )}
 
-        {tab === "strijelci" && (
-          <section>
-            <div className="sectionTitle"><div><span>Statistika</span><h2>Lista strijelaca</h2></div></div>
-            <div className="card tableWrap">
-              <table>
-                <thead><tr><th>#</th><th>Igrač</th><th>Ekipa</th><th>Golovi</th></tr></thead>
-                <tbody>
-                  {scorers.map((s, i) => <tr key={`${s.name}-${s.team}`}><td>{i + 1}</td><td>{s.name}</td><td>{s.team}</td><td><strong>{s.goals}</strong></td></tr>)}
-                </tbody>
-              </table>
-              {!scorers.length && <p className="muted">Nema unesenih strijelaca.</p>}
-            </div>
-          </section>
+        {tab === "rezultati" && (
+          <MatchesPage
+            title="Rezultati"
+            subtitle="Završene utakmice i konačni rezultati"
+            matches={finishedMatches}
+            empty="Nema završenih utakmica."
+          />
         )}
 
-        {tab === "ekipe" && (
-          <section>
-            <div className="sectionTitle"><div><span>Učesnici</span><h2>Ekipe</h2></div></div>
-            <div className="grid teams">
-              {(teams.length ? teams : [...new Set(fallbackMatches.flatMap((m) => [m.home_label, m.away_label]))].map((name) => ({ id: name, name }))).map((team) => (
-                <article className="card" key={team.id}>
-                  <h3>{team.name}</h3>
-                  <p className="muted">
-                    {players.filter((p) => p.team_id === team.id).length
-                      ? players.filter((p) => p.team_id === team.id).map((p) => p.name).join(", ")
-                      : "Igrači se unose naknadno."}
-                  </p>
-                </article>
-              ))}
-            </div>
-          </section>
-        )}
+        {tab === "strijelci" && <ScorersPage scorers={scorers} />}
+
+        {tab === "ekipe" && <TeamsPage teams={teams} players={players} />}
 
         {tab === "admin" && (
           <AdminPanel
@@ -275,28 +298,284 @@ export default function App() {
       <footer>
         <div className="footerBrand">
           <img src="/logo-sd-dubravka.png" alt="" />
-          <div><strong>Turnir SD Dubravka</strong><small>Javni prikaz rasporeda, rezultata i statistike</small></div>
+          <div>
+            <strong>Sportsko društvo Dubravka</strong>
+            <small>Malonogometni turnir • Tradicija • Sport • Zajedništvo</small>
+          </div>
         </div>
-        <div className="qr"><QRCodeSVG value={window.location.origin} size={72} bgColor="transparent" fgColor="#ffffff" /><span>Skeniraj za rezultate</span></div>
+
+        <div className="footerQr">
+          <span>Skeniraj za rezultate</span>
+          <QRCodeSVG
+            value={window.location.origin}
+            size={76}
+            bgColor="#ffffff"
+            fgColor="#02070d"
+            includeMargin
+          />
+        </div>
       </footer>
+
+      <nav className="mobileNav">
+        {NAV_ITEMS.map(([id, icon, label]) => (
+          <button
+            key={id}
+            className={tab === id ? "active" : ""}
+            onClick={() => setTab(id)}
+          >
+            <span>{icon}</span>
+            <small>{label}</small>
+          </button>
+        ))}
+      </nav>
     </div>
   );
 }
 
-function Match({ match }) {
+function HomeDashboard({ featuredMatch, latestResult, scorers, setTab }) {
   return (
-    <article className="match">
-      <div className="meta"><span>Utakmica {match.match_number || "–"}</span><small>{timeText(match.scheduled_at)}</small></div>
-      <div className="teamsLine">
-        <span>{matchName(match, "home")}</span>
-        <strong>{score(match)}</strong>
-        <span>{matchName(match, "away")}</span>
+    <>
+      <section className="dashboardGrid">
+        <FeatureMatchCard
+          title={featuredMatch?.status === "live" ? "Utakmica uživo" : "Sljedeća utakmica"}
+          icon="▣"
+          match={featuredMatch}
+          action="Pogledaj raspored"
+          onAction={() => setTab("utakmice")}
+        />
+
+        <FeatureMatchCard
+          title="Posljednji rezultat"
+          icon="🏆"
+          match={latestResult}
+          action="Svi rezultati"
+          onAction={() => setTab("rezultati")}
+          empty="Rezultati još nisu uneseni."
+        />
+
+        <section className="sportCard scorersCard">
+          <CardTitle icon="◎" title="Najbolji strijelci" />
+          {scorers.length ? (
+            <div className="topScorers">
+              {scorers.slice(0, 5).map((scorer, index) => (
+                <div className="scorerRow" key={`${scorer.name}-${scorer.team}`}>
+                  <span className="rankNumber">{index + 1}</span>
+                  <span className="scorerIdentity">
+                    <strong>{scorer.name}</strong>
+                    <small>{scorer.team}</small>
+                  </span>
+                  <b>{scorer.goals}</b>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <EmptyText>Strijelci još nisu uneseni.</EmptyText>
+          )}
+          <CardButton onClick={() => setTab("strijelci")}>Lista strijelaca</CardButton>
+        </section>
+      </section>
+
+      <section className="aboutPanel">
+        <span className="aboutSymbol">i</span>
+        <div>
+          <h2>O turniru</h2>
+          <p>
+            Dobrodošli na zvaničnu stranicu malonogometnog turnira Sportskog
+            društva Dubravka.
+          </p>
+          <p>
+            Ovdje možete pratiti raspored utakmica, rezultate i listu strijelaca.
+          </p>
+        </div>
+      </section>
+    </>
+  );
+}
+
+function FeatureMatchCard({ title, icon, match, action, onAction, empty }) {
+  return (
+    <section className="sportCard featureCard">
+      <CardTitle icon={icon} title={title} />
+
+      {match ? (
+        <>
+          <div className={`matchStatus ${match.status || "scheduled"}`}>
+            {statusLabel(match.status)}
+          </div>
+
+          <div className="matchNumber">Utakmica {match.match_number || "–"}</div>
+
+          <div className="featuredTeams">
+            <TeamBadge name={matchName(match, "home")} />
+            <div className="featuredScore">
+              <strong>{score(match)}</strong>
+              <small>{formatDate(match.scheduled_at)}</small>
+            </div>
+            <TeamBadge name={matchName(match, "away")} />
+          </div>
+        </>
+      ) : (
+        <EmptyText>{empty}</EmptyText>
+      )}
+
+      <CardButton onClick={onAction}>{action}</CardButton>
+    </section>
+  );
+}
+
+function TeamBadge({ name }) {
+  return (
+    <div className="teamBadge">
+      <div className="teamShield">{teamInitials(name)}</div>
+      <strong>{name}</strong>
+    </div>
+  );
+}
+
+function CardTitle({ icon, title }) {
+  return (
+    <div className="cardTitle">
+      <span>{icon}</span>
+      <h2>{title}</h2>
+    </div>
+  );
+}
+
+function CardButton({ children, onClick }) {
+  return (
+    <button className="cardButton" onClick={onClick}>
+      {children}
+      <span>›</span>
+    </button>
+  );
+}
+
+function EmptyText({ children }) {
+  return <p className="emptyText">{children}</p>;
+}
+
+function MatchesPage({ title, subtitle, matches, empty = "Nema utakmica." }) {
+  return (
+    <section>
+      <PageHeading eyebrow="Turnir SD Dubravka" title={title} subtitle={subtitle} />
+
+      <div className="matchesList">
+        {matches.length ? (
+          matches.map((match) => <MatchListCard key={match.id} match={match} />)
+        ) : (
+          <section className="sportCard">
+            <EmptyText>{empty}</EmptyText>
+          </section>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function MatchListCard({ match }) {
+  return (
+    <article className="matchListCard">
+      <div className="matchListMeta">
+        <span className={`statusDot ${match.status || "scheduled"}`}>
+          {statusLabel(match.status)}
+        </span>
+        <span>Utakmica {match.match_number || "–"}</span>
+        <span>{match.evening?.title || formatDate(match.scheduled_at)}</span>
+      </div>
+
+      <div className="matchListTeams">
+        <div>
+          <span className="smallShield">{teamInitials(matchName(match, "home"))}</span>
+          <strong>{matchName(match, "home")}</strong>
+        </div>
+
+        <b>{score(match)}</b>
+
+        <div>
+          <span className="smallShield">{teamInitials(matchName(match, "away"))}</span>
+          <strong>{matchName(match, "away")}</strong>
+        </div>
       </div>
     </article>
   );
 }
 
-function AdminPanel({ session, adminAllowed, matches, teams, players, reload, setNotice }) {
+function ScorersPage({ scorers }) {
+  return (
+    <section>
+      <PageHeading
+        eyebrow="Statistika"
+        title="Lista strijelaca"
+        subtitle="Poredak igrača prema broju postignutih golova"
+      />
+
+      <section className="sportCard scorersTableCard">
+        {scorers.length ? (
+          scorers.map((scorer, index) => (
+            <div className="fullScorerRow" key={`${scorer.name}-${scorer.team}`}>
+              <span className={`medal medal-${index + 1}`}>{index + 1}</span>
+              <div>
+                <strong>{scorer.name}</strong>
+                <small>{scorer.team}</small>
+              </div>
+              <b>{scorer.goals} {scorer.goals === 1 ? "gol" : "golova"}</b>
+            </div>
+          ))
+        ) : (
+          <EmptyText>Nema unesenih strijelaca.</EmptyText>
+        )}
+      </section>
+    </section>
+  );
+}
+
+function TeamsPage({ teams, players }) {
+  const publicTeams = teams.filter((team) => !team.is_placeholder);
+
+  return (
+    <section>
+      <PageHeading
+        eyebrow="Učesnici"
+        title="Ekipe"
+        subtitle="Prijavljene ekipe i spiskovi igrača"
+      />
+
+      <div className="teamsGrid">
+        {publicTeams.map((team) => {
+          const roster = players.filter((player) => player.team_id === team.id);
+
+          return (
+            <article className="teamCard" key={team.id}>
+              <div className="largeShield">{teamInitials(team.name)}</div>
+              <h2>{team.name}</h2>
+              <p>{roster.length ? `${roster.length} igrača` : "Igrači se unose naknadno."}</p>
+            </article>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+function PageHeading({ eyebrow, title, subtitle }) {
+  return (
+    <div className="pageHeading">
+      <span>{eyebrow}</span>
+      <h1>{title}</h1>
+      <p>{subtitle}</p>
+    </div>
+  );
+}
+
+function AdminPanel({
+  session,
+  adminAllowed,
+  matches,
+  teams,
+  players,
+  reload,
+  setNotice
+}) {
   const [email, setEmail] = useState("elizde89@gmail.com");
   const [matchId, setMatchId] = useState(matches[0]?.id || "");
   const [homeScore, setHomeScore] = useState("");
@@ -312,8 +591,9 @@ function AdminPanel({ session, adminAllowed, matches, teams, players, reload, se
   const [quantity, setQuantity] = useState(1);
 
   useEffect(() => {
-    const match = matches.find((m) => m.id === matchId);
+    const match = matches.find((item) => item.id === matchId);
     if (!match) return;
+
     setHomeScore(match.home_score ?? "");
     setAwayScore(match.away_score ?? "");
     setStatus(match.status || "scheduled");
@@ -321,137 +601,296 @@ function AdminPanel({ session, adminAllowed, matches, teams, players, reload, se
   }, [matchId, matches]);
 
   if (!supabase) {
-    return <section className="card"><h2>Admin panel</h2><p>Prvo dodaj Supabase environment varijable u Vercelu.</p></section>;
+    return (
+      <section className="adminShell">
+        <EmptyText>Supabase nije povezan.</EmptyText>
+      </section>
+    );
   }
 
-  async function login(e) {
-    e.preventDefault();
+  async function login(event) {
+    event.preventDefault();
+    const normalizedEmail = email.trim().toLowerCase();
+
+    if (!ADMIN_EMAILS.includes(normalizedEmail)) {
+      setNotice("Ovaj e-mail nije na listi administratora.");
+      return;
+    }
+
     const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: { emailRedirectTo: window.location.origin }
+      email: normalizedEmail,
+      options: {
+        emailRedirectTo: `${window.location.origin}/`,
+        shouldCreateUser: false
+      }
     });
-    setNotice(error ? error.message : "Magic Link je poslan na e-mail.");
+
+    setNotice(error ? error.message : "Magic Link je poslan na administratorski e-mail.");
   }
 
-  async function saveMatch(e) {
-    e.preventDefault();
-    const { error } = await supabase.from("matches").update({
-      home_score: homeScore === "" ? null : Number(homeScore),
-      away_score: awayScore === "" ? null : Number(awayScore),
-      status,
-      scheduled_at: scheduledAt ? new Date(scheduledAt).toISOString() : null
-    }).eq("id", matchId);
+  async function saveMatch(event) {
+    event.preventDefault();
+
+    const { error } = await supabase
+      .from("matches")
+      .update({
+        home_score: homeScore === "" ? null : Number(homeScore),
+        away_score: awayScore === "" ? null : Number(awayScore),
+        status,
+        scheduled_at: scheduledAt ? new Date(scheduledAt).toISOString() : null
+      })
+      .eq("id", matchId);
+
     setNotice(error ? error.message : "Utakmica je sačuvana.");
     if (!error) reload();
   }
 
-  async function addPlayer(e) {
-    e.preventDefault();
-    const seasonId = teams.find((t) => t.id === playerTeam)?.season_id;
+  async function addPlayer(event) {
+    event.preventDefault();
+    const seasonId = teams.find((team) => team.id === playerTeam)?.season_id;
+
     const { error } = await supabase.from("players").insert({
       season_id: seasonId,
       team_id: playerTeam,
       name: playerName
     });
+
     setNotice(error ? error.message : "Igrač je dodan.");
-    if (!error) { setPlayerName(""); reload(); }
+    if (!error) {
+      setPlayerName("");
+      reload();
+    }
   }
 
-  async function addGoal(e) {
-    e.preventDefault();
-    const team = teams.find((t) => t.id === goalTeam);
+  async function addGoal(event) {
+    event.preventDefault();
+    const team = teams.find((item) => item.id === goalTeam);
+
+    if (!goalPlayer && !goalName.trim()) {
+      setNotice("Izaberi igrača ili upiši ime strijelca.");
+      return;
+    }
+
     const { error } = await supabase.from("goals").insert({
       season_id: team?.season_id,
       match_id: goalMatch,
       team_id: goalTeam,
       player_id: goalPlayer || null,
-      player_name_override: goalPlayer ? null : goalName,
+      player_name_override: goalPlayer ? null : goalName.trim(),
       quantity: Number(quantity || 1)
     });
+
     setNotice(error ? error.message : "Strijelac je evidentiran.");
-    if (!error) reload();
+    if (!error) {
+      setGoalName("");
+      setQuantity(1);
+      reload();
+    }
   }
 
   if (!session) {
     return (
-      <section className="card login">
-        <span className="kicker">Administracija</span>
-        <h2>Prijava administratora</h2>
-        <form onSubmit={login}>
-          <label>E-mail</label>
-          <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
-          <button>Pošalji Magic Link</button>
+      <section className="adminLoginLayout">
+        <div className="adminIntro">
+          <span className="adminLock">🔒</span>
+          <p className="kicker">Zaštićeni pristup</p>
+          <h1>Admin panel</h1>
+          <p>
+            Prijaviti se mogu samo e-mail adrese koje su dodane u Supabase tabelu
+            administratora.
+          </p>
+        </div>
+
+        <form className="adminLoginCard" onSubmit={login}>
+          <span className="mailIcon">✉</span>
+          <h2>Prijava e-mailom</h2>
+          <label>E-mail administratora</label>
+          <input
+            type="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            required
+          />
+          <button type="submit">Pošalji Magic Link</button>
+          <small>Siguran link za prijavu stiže na e-mail.</small>
         </form>
       </section>
     );
   }
 
   if (!adminAllowed) {
-    return <section className="card"><h2>Nema pristupa</h2><button onClick={() => supabase.auth.signOut()}>Odjava</button></section>;
+    return (
+      <section className="adminShell">
+        <h1>Nema administratorskog pristupa</h1>
+        <p>Prijavljeni e-mail nije na listi administratora.</p>
+        <button className="secondaryButton" onClick={() => supabase.auth.signOut()}>
+          Odjava
+        </button>
+      </section>
+    );
   }
 
-  const goalPlayers = players.filter((p) => p.team_id === goalTeam);
+  const goalPlayers = players.filter((player) => player.team_id === goalTeam);
 
   return (
-    <section>
-      <div className="sectionTitle"><div><span>Administrator</span><h2>Upravljanje turnirom</h2></div><button className="secondary" onClick={() => supabase.auth.signOut()}>Odjava</button></div>
-      <div className="grid two">
-        <form className="card" onSubmit={saveMatch}>
-          <h3>Rezultat i termin</h3>
+    <section className="adminArea">
+      <div className="adminHeader">
+        <div>
+          <p className="kicker">Administracija</p>
+          <h1>Upravljanje turnirom</h1>
+          <p>Prijavljen: {session.user.email}</p>
+        </div>
+        <button className="secondaryButton" onClick={() => supabase.auth.signOut()}>
+          Odjava
+        </button>
+      </div>
+
+      <div className="adminDashboardGrid">
+        <form className="adminCard" onSubmit={saveMatch}>
+          <h2>🏆 Rezultat i termin</h2>
+
           <label>Utakmica</label>
-          <select value={matchId} onChange={(e) => setMatchId(e.target.value)}>
-            {matches.map((m) => <option key={m.id} value={m.id}>{m.match_number}. {matchName(m, "home")} – {matchName(m, "away")}</option>)}
+          <select value={matchId} onChange={(event) => setMatchId(event.target.value)}>
+            {matches.map((match) => (
+              <option key={match.id} value={match.id}>
+                {match.match_number}. {matchName(match, "home")} – {matchName(match, "away")}
+              </option>
+            ))}
           </select>
-          <div className="formRow">
-            <div><label>Domaćin</label><input type="number" min="0" value={homeScore} onChange={(e) => setHomeScore(e.target.value)} /></div>
-            <div><label>Gost</label><input type="number" min="0" value={awayScore} onChange={(e) => setAwayScore(e.target.value)} /></div>
+
+          <div className="scoreInputs">
+            <div>
+              <label>Domaćin</label>
+              <input
+                type="number"
+                min="0"
+                value={homeScore}
+                onChange={(event) => setHomeScore(event.target.value)}
+              />
+            </div>
+            <div>
+              <label>Gost</label>
+              <input
+                type="number"
+                min="0"
+                value={awayScore}
+                onChange={(event) => setAwayScore(event.target.value)}
+              />
+            </div>
           </div>
+
           <label>Status</label>
-          <select value={status} onChange={(e) => setStatus(e.target.value)}>
+          <select value={status} onChange={(event) => setStatus(event.target.value)}>
             <option value="scheduled">Zakazana</option>
             <option value="live">U toku</option>
             <option value="finished">Završena</option>
             <option value="postponed">Odgođena</option>
           </select>
+
           <label>Datum i vrijeme (opcionalno)</label>
-          <input type="datetime-local" value={scheduledAt} onChange={(e) => setScheduledAt(e.target.value)} />
-          <button>Sačuvaj</button>
+          <input
+            type="datetime-local"
+            value={scheduledAt}
+            onChange={(event) => setScheduledAt(event.target.value)}
+          />
+
+          <button type="submit">Sačuvaj utakmicu</button>
         </form>
 
-        <form className="card" onSubmit={addPlayer}>
-          <h3>Dodaj igrača</h3>
+        <form className="adminCard" onSubmit={addPlayer}>
+          <h2>👤 Dodaj igrača</h2>
+
           <label>Ekipa</label>
-          <select value={playerTeam} onChange={(e) => setPlayerTeam(e.target.value)} required>
+          <select
+            value={playerTeam}
+            onChange={(event) => setPlayerTeam(event.target.value)}
+            required
+          >
             <option value="">Izaberi ekipu</option>
-            {teams.filter((t) => !t.is_placeholder).map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+            {teams
+              .filter((team) => !team.is_placeholder)
+              .map((team) => (
+                <option key={team.id} value={team.id}>
+                  {team.name}
+                </option>
+              ))}
           </select>
+
           <label>Ime i prezime</label>
-          <input value={playerName} onChange={(e) => setPlayerName(e.target.value)} required />
-          <button>Dodaj igrača</button>
+          <input
+            value={playerName}
+            onChange={(event) => setPlayerName(event.target.value)}
+            required
+          />
+
+          <button type="submit">Dodaj igrača</button>
         </form>
 
-        <form className="card" onSubmit={addGoal}>
-          <h3>Evidentiraj strijelca</h3>
+        <form className="adminCard" onSubmit={addGoal}>
+          <h2>⚽ Evidentiraj strijelca</h2>
+
           <label>Utakmica</label>
-          <select value={goalMatch} onChange={(e) => setGoalMatch(e.target.value)} required>
+          <select
+            value={goalMatch}
+            onChange={(event) => setGoalMatch(event.target.value)}
+            required
+          >
             <option value="">Izaberi utakmicu</option>
-            {matches.map((m) => <option key={m.id} value={m.id}>{m.match_number}. {matchName(m, "home")} – {matchName(m, "away")}</option>)}
+            {matches.map((match) => (
+              <option key={match.id} value={match.id}>
+                {match.match_number}. {matchName(match, "home")} – {matchName(match, "away")}
+              </option>
+            ))}
           </select>
+
           <label>Ekipa</label>
-          <select value={goalTeam} onChange={(e) => { setGoalTeam(e.target.value); setGoalPlayer(""); }} required>
+          <select
+            value={goalTeam}
+            onChange={(event) => {
+              setGoalTeam(event.target.value);
+              setGoalPlayer("");
+            }}
+            required
+          >
             <option value="">Izaberi ekipu</option>
-            {teams.filter((t) => !t.is_placeholder).map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+            {teams
+              .filter((team) => !team.is_placeholder)
+              .map((team) => (
+                <option key={team.id} value={team.id}>
+                  {team.name}
+                </option>
+              ))}
           </select>
-          <label>Igrač</label>
-          <select value={goalPlayer} onChange={(e) => setGoalPlayer(e.target.value)}>
+
+          <label>Igrač sa spiska</label>
+          <select
+            value={goalPlayer}
+            onChange={(event) => setGoalPlayer(event.target.value)}
+          >
             <option value="">Upiši ručno</option>
-            {goalPlayers.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+            {goalPlayers.map((player) => (
+              <option key={player.id} value={player.id}>
+                {player.name}
+              </option>
+            ))}
           </select>
+
           <label>Ime strijelca ako nije na spisku</label>
-          <input value={goalName} onChange={(e) => setGoalName(e.target.value)} disabled={Boolean(goalPlayer)} />
+          <input
+            value={goalName}
+            onChange={(event) => setGoalName(event.target.value)}
+            disabled={Boolean(goalPlayer)}
+          />
+
           <label>Broj golova</label>
-          <input type="number" min="1" value={quantity} onChange={(e) => setQuantity(e.target.value)} />
-          <button>Dodaj golove</button>
+          <input
+            type="number"
+            min="1"
+            value={quantity}
+            onChange={(event) => setQuantity(event.target.value)}
+          />
+
+          <button type="submit">Dodaj golove</button>
         </form>
       </div>
     </section>
