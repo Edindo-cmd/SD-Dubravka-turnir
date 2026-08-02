@@ -275,7 +275,7 @@ export default function App() {
         <div className="topBar">
           <button className="brandButton" onClick={() => setTab("pregled")}>
             <span className="brandLogoShell">
-              <img src="/logo-sd-dubravka.png" alt="Logo SD Dubravka" />
+              <img src="/logo.png" alt="Logo SD Dubravka" />
             </span>
             <span className="brandCopy">
               <strong>Turnir SD Dubravka</strong>
@@ -410,7 +410,7 @@ export default function App() {
 
       <footer>
         <div className="footerBrand">
-          <img src="/logo-sd-dubravka.png" alt="" />
+          <img src="/logo.png" alt="Logo SD Dubravka" />
           <div>
             <strong>Sportsko društvo Dubravka</strong>
             <small>Malonogometni turnir • Tradicija • Sport • Zajedništvo</small>

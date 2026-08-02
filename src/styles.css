@@ -77,10 +77,12 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 }
 
 .brandLogoShell img {
+  display: block;
   width: 100%;
   height: 100%;
   object-fit: contain;
   object-position: center;
+  border-radius: 9px;
 }
 
 .brandCopy {
@@ -962,9 +964,12 @@ footer {
 }
 
 .footerBrand img {
+  display: block;
   width: 62px;
   height: 62px;
   object-fit: contain;
+  object-position: center;
+  border-radius: 10px;
 }
 
 .footerBrand > div {
