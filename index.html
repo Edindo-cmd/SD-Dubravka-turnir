@@ -1,116 +1,14 @@
 <!doctype html>
 <html lang="bs">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#07131f" />
-  <meta name="description" content="Raspored, rezultati i strijelci Turnira SD Dubravka." />
-  <title>Turnir SD Dubravka</title>
-  <link rel="stylesheet" href="./styles.css" />
-</head>
-<body>
-  <header class="hero">
-    <div class="hero-inner">
-      <p class="kicker">Sportsko društvo Dubravka</p>
-      <h1>Turnir SD Dubravka</h1>
-      <p>Raspored, rezultati i lista strijelaca.</p>
-    </div>
-  </header>
-
-  <nav class="nav">
-    <button data-tab="matches" class="active">Utakmice</button>
-    <button data-tab="scorers">Strijelci</button>
-    <button data-tab="admin">Admin</button>
-  </nav>
-
-  <main class="container">
-    <div id="message"></div>
-
-    <section id="tab-matches" class="tab active">
-      <div class="section-title">
-        <div><span>Eliminacijski sistem</span><h2>Prvo kolo</h2></div>
-        <strong id="progress">0/11 završeno</strong>
-      </div>
-      <div id="matches" class="matches"></div>
-    </section>
-
-    <section id="tab-scorers" class="tab">
-      <div class="section-title"><div><span>Statistika</span><h2>Lista strijelaca</h2></div></div>
-      <div class="panel table-wrap">
-        <table>
-          <thead><tr><th>#</th><th>Igrač</th><th>Ekipa</th><th>Golovi</th></tr></thead>
-          <tbody id="scorers-body"></tbody>
-        </table>
-        <p id="no-scorers" class="muted">Strijelci još nisu uneseni.</p>
-      </div>
-    </section>
-
-    <section id="tab-admin" class="tab">
-      <div id="login-panel" class="panel narrow">
-        <h2>Prijava administratora</h2>
-        <p class="muted">Na e-mail stiže jednokratni sigurni link.</p>
-        <form id="login-form">
-          <label>E-mail</label>
-          <input id="login-email" type="email" value="elizde89@gmail.com" required />
-          <button type="submit">Pošalji Magic Link</button>
-        </form>
-      </div>
-
-      <div id="no-access" class="panel hidden">
-        <h2>Nema administratorskog pristupa</h2>
-        <button id="logout-no-access" class="secondary">Odjava</button>
-      </div>
-
-      <div id="admin-panel" class="hidden">
-        <div class="section-title">
-          <div><span>Administrator</span><h2>Upravljanje turnirom</h2></div>
-          <button id="logout" class="secondary">Odjava</button>
-        </div>
-        <div class="admin-grid">
-          <form id="match-form" class="panel">
-            <h3>Rezultat, večer i termin</h3>
-            <label>Utakmica</label>
-            <select id="match-select" required></select>
-            <div class="two">
-              <div><label>Golovi domaćina</label><input id="home-score" type="number" min="0" /></div>
-              <div><label>Golovi gosta</label><input id="away-score" type="number" min="0" /></div>
-            </div>
-            <label>Status</label>
-            <select id="match-status">
-              <option value="scheduled">Zakazana</option>
-              <option value="live">U toku</option>
-              <option value="finished">Završena</option>
-              <option value="postponed">Odgođena</option>
-            </select>
-            <label>Naziv večeri (opcionalno)</label>
-            <input id="evening-title" placeholder="npr. Prva večer" />
-            <label>Datum i vrijeme (opcionalno)</label>
-            <input id="scheduled-at" type="datetime-local" />
-            <button type="submit">Sačuvaj utakmicu</button>
-          </form>
-
-          <form id="goal-form" class="panel">
-            <h3>Evidencija strijelaca</h3>
-            <label>Utakmica</label>
-            <select id="goal-match" required></select>
-            <label>Ekipa</label>
-            <input id="goal-team" required />
-            <label>Ime i prezime igrača</label>
-            <input id="goal-player" required />
-            <label>Broj golova</label>
-            <input id="goal-quantity" type="number" min="1" value="1" required />
-            <button type="submit">Dodaj strijelca</button>
-          </form>
-        </div>
-      </div>
-    </section>
-  </main>
-
-  <footer>
-    <div><b>Turnir SD Dubravka</b><span>Javni prikaz za gledatelje</span></div>
-    <div class="qr-wrap"><div id="qr"></div><small>Skeniraj link</small></div>
-  </footer>
-
-  <script type="module" src="./app.js"></script>
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#06111d" />
+    <meta name="description" content="Raspored, rezultati i strijelci Turnira SD Dubravka." />
+    <title>Turnir SD Dubravka</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="./src/main.jsx"></script>
+  </body>
 </html>

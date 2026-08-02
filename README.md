@@ -1,33 +1,56 @@
-# Turnir SD Dubravka — statička verzija bez builda
+# Turnir SD Dubravka — testirana V1
 
-Ova verzija nema npm, React build niti Vite. Vercel je objavljuje kao običnu statičku stranicu, pa nema greške `main.jsx` ili `npm run build`.
+Ovaj projekt je lokalno testiran komandama:
+
+```bash
+npm install
+npm run build
+```
 
 ## GitHub
 
-U novi ili očišćeni repository prenesi direktno:
-
-- `index.html`
-- `app.js`
-- `config.js`
-- `styles.css`
-- `vercel.json`
-- `public/`
-- `supabase/`
+Raspakuj ZIP i prenesi sadržaj direktno u root repozitorija. `package.json`, `index.html` i folder `src` moraju biti na prvoj razini.
 
 ## Vercel
 
-- Framework Preset: **Other**
-- Build Command: ostavi prazno / Override isključen
-- Output Directory: ostavi prazno
+- Framework Preset: Vite
 - Root Directory: prazno
+- Build Command: `npm run build`
+- Output Directory: `dist`
+- Install Command: `npm install`
 
-Nisu potrebne environment varijable jer su Supabase URL i publishable key u `config.js`. Publishable key je namijenjen klijentskoj aplikaciji; zaštita izmjena je u RLS pravilima.
+Environment variables:
+
+```text
+VITE_SUPABASE_URL=https://buvxjvkbvgkqqjocabkr.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=<tvoj publishable ključ>
+```
 
 ## Supabase
 
-U SQL Editoru pokreni cijeli sadržaj `supabase/schema.sql`.
+U SQL Editoru pokreni `supabase/schema.sql`.
 
-Nakon deploya u Authentication → URL Configuration:
+Nakon deploya u:
 
-- Site URL: Vercel adresa
-- Redirect URLs: `https://tvoj-projekat.vercel.app/**`
+Authentication → URL Configuration
+
+postavi Vercel adresu kao Site URL i dodaj:
+
+```text
+https://tvoj-projekt.vercel.app/**
+```
+
+u Redirect URLs.
+
+
+## Redizajn
+
+Nova verzija sadrži:
+
+- izdvojen grb SD Dubravka u zaglavlju i podnožju
+- diskretnu stadion pozadinu bez čitljivog rasporeda u pozadini
+- bolje kartice i tipografiju
+- mobilnu donju navigaciju
+- optimizovan prikaz utakmica za manje ekrane
+
+Za objavu zamijeni postojeće datoteke sadržajem ovog projekta i uradi commit/push. Vercel će automatski redeployati isti javni URL.
