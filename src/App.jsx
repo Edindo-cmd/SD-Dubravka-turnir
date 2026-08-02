@@ -269,19 +269,14 @@ export default function App() {
     };
   }, [matches, upcomingMatches]);
 
-  const todayMatchesCount = useMemo(() => {
-    const todayKey = localDateKey(new Date());
-
-    return matches.filter(
-      (match) =>
-        match.scheduled_at &&
-        localDateKey(match.scheduled_at) === todayKey
-    ).length;
-  }, [matches]);
-
   const finishedMatchesCount = useMemo(
     () => matches.filter((match) => match.status === "finished").length,
     [matches]
+  );
+
+  const totalGoalsCount = useMemo(
+    () => goals.reduce((sum, goal) => sum + Number(goal.quantity || 1), 0),
+    [goals]
   );
 
   return (
@@ -345,12 +340,12 @@ export default function App() {
                 <span>Ekipe</span>
               </div>
               <div>
-                <strong>{todayMatchesCount}</strong>
-                <span>Danas</span>
-              </div>
-              <div>
                 <strong>{finishedMatchesCount}</strong>
                 <span>Odigrano</span>
+              </div>
+              <div>
+                <strong>{totalGoalsCount}</strong>
+                <span>Golova</span>
               </div>
             </div>
           </div>
