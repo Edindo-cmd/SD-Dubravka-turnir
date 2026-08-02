@@ -269,6 +269,21 @@ export default function App() {
     };
   }, [matches, upcomingMatches]);
 
+  const todayMatchesCount = useMemo(() => {
+    const todayKey = localDateKey(new Date());
+
+    return matches.filter(
+      (match) =>
+        match.scheduled_at &&
+        localDateKey(match.scheduled_at) === todayKey
+    ).length;
+  }, [matches]);
+
+  const finishedMatchesCount = useMemo(
+    () => matches.filter((match) => match.status === "finished").length,
+    [matches]
+  );
+
   return (
     <div className="app">
       <header className="siteHeader">
@@ -330,11 +345,11 @@ export default function App() {
                 <span>Ekipe</span>
               </div>
               <div>
-                <strong>{matches.length || 11}</strong>
-                <span>Utakmica</span>
+                <strong>{todayMatchesCount}</strong>
+                <span>Danas</span>
               </div>
               <div>
-                <strong>{matches.filter((match) => match.status === "finished").length}</strong>
+                <strong>{finishedMatchesCount}</strong>
                 <span>Odigrano</span>
               </div>
             </div>
