@@ -2,8 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { supabase } from "./supabase.js";
 
-const ADMIN_EMAILS = ["elizde89@gmail.com"];
-
 const fallbackMatches = [
   ["Kafadar Gnojnice", "Barber shop Sema"],
   ["Bobanovo", "Barber shop Šule"],
@@ -613,11 +611,6 @@ function AdminPanel({
     event.preventDefault();
     const normalizedEmail = email.trim().toLowerCase();
 
-    if (!ADMIN_EMAILS.includes(normalizedEmail)) {
-      setNotice("Ovaj e-mail nije na listi administratora.");
-      return;
-    }
-
     if (!password) {
       setNotice("Unesi lozinku.");
       return;
@@ -730,7 +723,7 @@ function AdminPanel({
             required
           />
           <button type="submit">Prijavi se</button>
-          <small>Prijava je dozvoljena samo odobrenim administratorima.</small>
+          <small>Nakon prijave, administratorska prava provjeravaju se u Supabase tabeli admins.</small>
         </form>
       </section>
     );
