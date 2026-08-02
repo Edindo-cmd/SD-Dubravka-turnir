@@ -202,10 +202,12 @@ export default function App() {
       <header className="siteHeader">
         <div className="topBar">
           <button className="brandButton" onClick={() => setTab("pregled")}>
-            <img src="/logo-sd-dubravka.png" alt="SD Dubravka" />
-            <span>
-              <small>Sportsko društvo</small>
-              <strong>Dubravka</strong>
+            <span className="brandLogoShell">
+              <img src="/logo-sd-dubravka.png" alt="Logo SD Dubravka" />
+            </span>
+            <span className="brandCopy">
+              <strong>Turnir SD Dubravka</strong>
+              <small>Sportsko društvo Dubravka</small>
             </span>
           </button>
 
@@ -216,13 +218,47 @@ export default function App() {
 
         <div className="hero">
           <div className="heroShade" />
+          <div className="heroPattern" aria-hidden="true" />
+
           <div className="heroContent">
-            <img className="heroLogo" src="/logo-sd-dubravka.png" alt="Grb SD Dubravka" />
-            <p className="kicker">Zvanična stranica turnira</p>
-            <h1>Turnir <span>SD Dubravka</span></h1>
+            <p className="heroEyebrow">Tradicionalni malonogometni turnir</p>
+
+            <h1 className="heroTitle">
+              <span>TURNIR</span>
+              <strong>SD DUBRAVKA</strong>
+              <em>2026</em>
+            </h1>
+
             <p className="heroSubtitle">
               Raspored <i>•</i> Rezultati <i>•</i> Strijelci
             </p>
+
+            <div className="heroActions">
+              <button className="heroPrimary" onClick={() => setTab("utakmice")}>
+                Pogledaj utakmice
+              </button>
+              <button className="heroSecondary" onClick={() => setTab("rezultati")}>
+                Rezultati
+              </button>
+              <button className="heroSecondary" onClick={() => setTab("strijelci")}>
+                Strijelci
+              </button>
+            </div>
+
+            <div className="heroStats">
+              <div>
+                <strong>{teams.filter((team) => !team.is_placeholder).length || 22}</strong>
+                <span>Ekipe</span>
+              </div>
+              <div>
+                <strong>{matches.length || 11}</strong>
+                <span>Utakmica</span>
+              </div>
+              <div>
+                <strong>{matches.filter((match) => match.status === "finished").length}</strong>
+                <span>Odigrano</span>
+              </div>
+            </div>
           </div>
         </div>
       </header>
