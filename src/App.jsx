@@ -495,6 +495,23 @@ function HomeDashboard({ featuredDay, latestResult, scorers, setTab }) {
         </section>
       </section>
 
+      <section className="locationCard">
+        <div className="locationCardHeader">
+          <span aria-hidden="true">🗺️</span>
+          <h2>Lokacija turnira</h2>
+        </div>
+
+        <a
+          href="https://maps.app.goo.gl/XrQSRoZeoVpgBqfk7"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="locationButton"
+        >
+          <span aria-hidden="true">🧭</span>
+          Navigacija do turnira
+        </a>
+      </section>
+
       <section className="aboutPanel">
         <span className="aboutSymbol">i</span>
         <div>
