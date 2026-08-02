@@ -577,6 +577,7 @@ function AdminPanel({
   setNotice
 }) {
   const [email, setEmail] = useState("elizde89@gmail.com");
+  const [password, setPassword] = useState("");
   const [matchId, setMatchId] = useState(matches[0]?.id || "");
   const [homeScore, setHomeScore] = useState("");
   const [awayScore, setAwayScore] = useState("");
@@ -617,15 +618,23 @@ function AdminPanel({
       return;
     }
 
-    const { error } = await supabase.auth.signInWithOtp({
+    if (!password) {
+      setNotice("Unesi lozinku.");
+      return;
+    }
+
+    const { error } = await supabase.auth.signInWithPassword({
       email: normalizedEmail,
-      options: {
-        emailRedirectTo: `${window.location.origin}/`,
-        shouldCreateUser: false
-      }
+      password
     });
 
-    setNotice(error ? error.message : "Magic Link je poslan na administratorski e-mail.");
+    if (error) {
+      setNotice(`Prijava nije uspjela: ${error.message}`);
+      return;
+    }
+
+    setNotice("Uspješno ste prijavljeni.");
+    setPassword("");
   }
 
   async function saveMatch(event) {
@@ -703,7 +712,7 @@ function AdminPanel({
 
         <form className="adminLoginCard" onSubmit={login}>
           <span className="mailIcon">✉</span>
-          <h2>Prijava e-mailom</h2>
+          <h2>Prijava administratora</h2>
           <label>E-mail administratora</label>
           <input
             type="email"
@@ -711,8 +720,17 @@ function AdminPanel({
             onChange={(event) => setEmail(event.target.value)}
             required
           />
-          <button type="submit">Pošalji Magic Link</button>
-          <small>Siguran link za prijavu stiže na e-mail.</small>
+
+          <label>Lozinka</label>
+          <input
+            type="password"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            autoComplete="current-password"
+            required
+          />
+          <button type="submit">Prijavi se</button>
+          <small>Prijava je dozvoljena samo odobrenim administratorima.</small>
         </form>
       </section>
     );
