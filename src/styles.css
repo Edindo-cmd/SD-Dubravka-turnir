@@ -436,49 +436,6 @@ button:focus-visible, input:focus-visible, select:focus-visible {
   overflow-wrap: anywhere;
 }
 
-.matchScorers {
-  display: grid;
-  gap: 5px;
-  margin-top: 10px;
-  text-align: left;
-}
-
-.matchScorerRow {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 6px;
-  padding-top: 5px;
-  border-top: 1px solid rgba(255,255,255,.07);
-  font-size: .67rem;
-  line-height: 1.25;
-}
-
-.matchScorerRow > span:first-child {
-  min-width: 0;
-  overflow-wrap: anywhere;
-  color: #d8dfe5;
-}
-
-.goalBalls {
-  flex: 0 0 auto;
-  display: inline-flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 1px;
-  max-width: 58px;
-  font-size: .63rem;
-  line-height: 1.05;
-}
-
-.noScorers {
-  display: block;
-  color: var(--muted);
-  font-size: .62rem;
-  line-height: 1.3;
-  text-align: center;
-}
-
 .teamShield, .largeShield, .smallShield {
   display: grid;
   place-items: center;
@@ -508,6 +465,69 @@ button:focus-visible, input:focus-visible, select:focus-visible {
   margin-top: 8px;
   color: var(--muted);
   font-size: .68rem;
+}
+
+.resultScorersGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: -7px 0 18px;
+}
+
+.resultScorerColumn {
+  min-width: 0;
+  padding: 10px;
+  border-radius: 10px;
+  background: rgba(0,0,0,.14);
+  border: 1px solid rgba(255,255,255,.075);
+}
+
+.resultScorerColumn > small {
+  display: block;
+  margin-bottom: 7px;
+  color: var(--muted);
+  font-size: .62rem;
+  line-height: 1.25;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.resultScorerRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 7px;
+  padding: 5px 0;
+  border-top: 1px solid rgba(255,255,255,.07);
+  font-size: .68rem;
+  line-height: 1.3;
+}
+
+.resultScorerRow > span:first-child {
+  min-width: 0;
+  color: #dce3e9;
+  overflow-wrap: anywhere;
+}
+
+.resultGoalBalls {
+  flex: 0 0 auto;
+  display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 1px;
+  max-width: 60px;
+  font-size: .65rem;
+  line-height: 1.05;
+}
+
+.resultNoScorer {
+  display: block;
+  padding-top: 5px;
+  border-top: 1px solid rgba(255,255,255,.07);
+  color: var(--muted);
+  font-size: .62rem;
+  line-height: 1.3;
+  text-align: center;
 }
 
 .cardButton {
@@ -1570,11 +1590,16 @@ footer {
 
   .teamBadge strong { font-size: .72rem; }
 
-  .matchScorers {
-    margin-top: 8px;
+  .resultScorersGrid {
+    gap: 7px;
+    margin-top: -3px;
   }
 
-  .matchScorerRow {
+  .resultScorerColumn {
+    padding: 8px 7px;
+  }
+
+  .resultScorerRow {
     flex-direction: column;
     align-items: center;
     gap: 3px;
@@ -1582,7 +1607,7 @@ footer {
     text-align: center;
   }
 
-  .goalBalls {
+  .resultGoalBalls {
     justify-content: center;
     max-width: 100%;
   }

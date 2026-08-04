@@ -107,28 +107,29 @@ function shortPlayerName(name) {
     .split(/\s+/)
     .filter(Boolean);
 
-  if (parts.length === 1) return parts[0];
+  if (parts.length <= 1) return parts[0] || "Nepoznat igrač";
 
-  const firstInitial = parts[0][0]?.toUpperCase() || "";
-  const surname = parts.slice(1).join(" ");
-
-  return `${firstInitial}. ${surname}`;
+  return `${parts[0][0].toUpperCase()}. ${parts.slice(1).join(" ")}`;
 }
 
-function matchScorers(goals, matchId, teamId) {
+function getMatchScorers(goals, matchId, teamId) {
   const grouped = new Map();
 
   for (const goal of goals) {
-    if (goal.match_id !== matchId || goal.team_id !== teamId) continue;
+    const goalMatchId = goal.match_id ?? goal.match?.id;
+    const goalTeamId = goal.team_id ?? goal.team?.id;
 
-    const name =
+    if (String(goalMatchId) !== String(matchId)) continue;
+    if (String(goalTeamId) !== String(teamId)) continue;
+
+    const playerName =
       goal.player?.name ||
       goal.player_name_override ||
       "Nepoznat igrač";
 
     grouped.set(
-      name,
-      (grouped.get(name) || 0) + Number(goal.quantity || 1)
+      playerName,
+      (grouped.get(playerName) || 0) + Number(goal.quantity || 1)
     );
   }
 
@@ -663,17 +664,17 @@ function FeatureMatchCard({
   onAction,
   empty
 }) {
-  const homeTeamId = match?.home_team?.id || match?.home_team_id;
-  const awayTeamId = match?.away_team?.id || match?.away_team_id;
+  const homeTeamId = match?.home_team_id ?? match?.home_team?.id;
+  const awayTeamId = match?.away_team_id ?? match?.away_team?.id;
 
   const homeScorers =
     match && showScorers
-      ? matchScorers(goals, match.id, homeTeamId)
+      ? getMatchScorers(goals, match.id, homeTeamId)
       : [];
 
   const awayScorers =
     match && showScorers
-      ? matchScorers(goals, match.id, awayTeamId)
+      ? getMatchScorers(goals, match.id, awayTeamId)
       : [];
 
   return (
@@ -689,23 +690,28 @@ function FeatureMatchCard({
           <div className="matchNumber">Utakmica {match.match_number || "–"}</div>
 
           <div className="featuredTeams">
-            <TeamBadge
-              name={matchName(match, "home")}
-              scorers={homeScorers}
-              showScorers={showScorers}
-            />
+            <TeamBadge name={matchName(match, "home")} />
 
             <div className="featuredScore">
               <strong>{score(match)}</strong>
               <small>{formatDate(match.scheduled_at)}</small>
             </div>
 
-            <TeamBadge
-              name={matchName(match, "away")}
-              scorers={awayScorers}
-              showScorers={showScorers}
-            />
+            <TeamBadge name={matchName(match, "away")} />
           </div>
+
+          {showScorers && (
+            <div className="resultScorersGrid">
+              <MatchScorerList
+                teamName={matchName(match, "home")}
+                scorers={homeScorers}
+              />
+              <MatchScorerList
+                teamName={matchName(match, "away")}
+                scorers={awayScorers}
+              />
+            </div>
+          )}
         </>
       ) : (
         <EmptyText>{empty}</EmptyText>
@@ -716,38 +722,33 @@ function FeatureMatchCard({
   );
 }
 
-function TeamBadge({ name, scorers = [], showScorers = false }) {
+function MatchScorerList({ teamName, scorers }) {
   return (
-    <div className="teamBadge">
-      <div className="teamShield">{teamInitials(name)}</div>
-      <strong>{name}</strong>
+    <div className="resultScorerColumn">
+      <small>{teamName}</small>
 
-      {showScorers && (
-        <div className="matchScorers">
-          {scorers.length ? (
-            scorers.map((scorer) => (
-              <div className="matchScorerRow" key={`${name}-${scorer.name}`}>
-                <span>{scorer.name}</span>
-                <span
-                  className="goalBalls"
-                  aria-label={`${scorer.goals} ${scorer.goals === 1 ? "gol" : "golova"}`}
-                >
-                  {Array.from({ length: scorer.goals }, (_, index) => (
-                    <span aria-hidden="true" key={index}>⚽</span>
-                  ))}
-                </span>
-              </div>
-            ))
-          ) : (
-            <small className="noScorers">Bez evidentiranih strijelaca</small>
-          )}
-        </div>
+      {scorers.length ? (
+        scorers.map((scorer) => (
+          <div className="resultScorerRow" key={`${teamName}-${scorer.name}`}>
+            <span>{scorer.name}</span>
+            <span
+              className="resultGoalBalls"
+              aria-label={`${scorer.goals} ${scorer.goals === 1 ? "gol" : "golova"}`}
+            >
+              {Array.from({ length: scorer.goals }, (_, index) => (
+                <span aria-hidden="true" key={index}>⚽</span>
+              ))}
+            </span>
+          </div>
+        ))
+      ) : (
+        <span className="resultNoScorer">Strijelci nisu uneseni</span>
       )}
     </div>
   );
 }
 
-function CardTitle({ name }) {
+function TeamBadge({ name }) {
   return (
     <div className="teamBadge">
       <div className="teamShield">{teamInitials(name)}</div>
