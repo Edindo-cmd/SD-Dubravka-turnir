@@ -31,6 +31,7 @@ const NAV_ITEMS = [
   ["utakmice", "▣", "Raspored"],
   ["rezultati", "🏆", "Rezultati"],
   ["strijelci", "◎", "Strijelci"],
+  ["ekipe", "👥", "Ekipe"],
   ["admin", "♙", "Admin"]
 ];
 
@@ -390,13 +391,6 @@ export default function App() {
             {label}
           </button>
         ))}
-        <button
-          className={tab === "ekipe" ? "active" : ""}
-          onClick={() => setTab("ekipe")}
-        >
-          <span>👥</span>
-          Ekipe
-        </button>
       </nav>
 
       <main className="mainContent">
@@ -430,7 +424,7 @@ export default function App() {
 
         {tab === "strijelci" && <ScorersPage scorers={scorers} />}
 
-        {tab === "ekipe" && <TeamsPage teams={teams} players={players} />}
+        {tab === "ekipe" && <TeamsPage teams={teams} players={players} goals={goals} />}
 
         {tab === "admin" && (
           <AdminPanel
@@ -754,26 +748,107 @@ function ScorersPage({ scorers }) {
   );
 }
 
-function TeamsPage({ teams, players }) {
+function TeamsPage({ teams, players, goals }) {
+  const [selectedTeamId, setSelectedTeamId] = useState(null);
   const publicTeams = teams.filter((team) => !team.is_placeholder);
+
+  const playerGoals = useMemo(() => {
+    const totals = new Map();
+
+    for (const goal of goals) {
+      if (!goal.player_id) continue;
+      totals.set(
+        goal.player_id,
+        (totals.get(goal.player_id) || 0) + Number(goal.quantity || 1)
+      );
+    }
+
+    return totals;
+  }, [goals]);
+
+  function toggleTeam(teamId) {
+    setSelectedTeamId((current) => current === teamId ? null : teamId);
+  }
 
   return (
     <section>
       <PageHeading
         eyebrow="Učesnici"
         title="Ekipe"
-        subtitle="Prijavljene ekipe i spiskovi igrača"
+        subtitle="Kliknite na ekipu za pregled igrača i njihovih golova"
       />
 
       <div className="teamsGrid">
         {publicTeams.map((team) => {
-          const roster = players.filter((player) => player.team_id === team.id);
+          const roster = players
+            .filter((player) => player.team_id === team.id)
+            .slice()
+            .sort((a, b) => {
+              const goalDifference =
+                (playerGoals.get(b.id) || 0) - (playerGoals.get(a.id) || 0);
+
+              return goalDifference || a.name.localeCompare(b.name);
+            });
+
+          const teamGoals = goals
+            .filter((goal) => goal.team_id === team.id)
+            .reduce((sum, goal) => sum + Number(goal.quantity || 1), 0);
+
+          const isOpen = selectedTeamId === team.id;
 
           return (
-            <article className="teamCard" key={team.id}>
-              <div className="largeShield">{teamInitials(team.name)}</div>
-              <h2>{team.name}</h2>
-              <p>{roster.length ? `${roster.length} igrača` : "Igrači se unose naknadno."}</p>
+            <article
+              className={`teamCard ${isOpen ? "open" : ""}`}
+              key={team.id}
+            >
+              <button
+                type="button"
+                className="teamCardButton"
+                onClick={() => toggleTeam(team.id)}
+                aria-expanded={isOpen}
+              >
+                <div className="largeShield">{teamInitials(team.name)}</div>
+
+                <span className="teamCardCopy">
+                  <strong>{team.name}</strong>
+                  <small>
+                    {roster.length
+                      ? `${roster.length} igrača • ${teamGoals} ${teamGoals === 1 ? "gol" : "golova"}`
+                      : "Igrači se unose naknadno."}
+                  </small>
+                </span>
+
+                <span className="teamCardChevron" aria-hidden="true">
+                  {isOpen ? "−" : "+"}
+                </span>
+              </button>
+
+              {isOpen && (
+                <div className="teamRoster">
+                  {roster.length ? (
+                    roster.map((player, index) => {
+                      const goalsCount = playerGoals.get(player.id) || 0;
+
+                      return (
+                        <div className="teamPlayerRow" key={player.id}>
+                          <span className="teamPlayerNumber">{index + 1}</span>
+
+                          <span className="teamPlayerName">
+                            <strong>{player.name}</strong>
+                            <small>{goalsCount === 1 ? "1 gol" : `${goalsCount} golova`}</small>
+                          </span>
+
+                          <b>{goalsCount}</b>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <p className="teamRosterEmpty">
+                      Za ovu ekipu još nisu uneseni igrači.
+                    </p>
+                  )}
+                </div>
+              )}
             </article>
           );
         })}
