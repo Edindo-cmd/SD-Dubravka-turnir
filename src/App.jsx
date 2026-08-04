@@ -108,6 +108,7 @@ export default function App() {
   const [goals, setGoals] = useState([]);
   const [session, setSession] = useState(null);
   const [adminAllowed, setAdminAllowed] = useState(false);
+  const [visitCount, setVisitCount] = useState(null);
   const [notice, setNotice] = useState(
     supabase ? "" : "Dodaj Supabase varijable u Vercelu za povezivanje s bazom."
   );
@@ -170,6 +171,42 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    async function loadVisitCount() {
+      if (!supabase) return;
+
+      const storageKey = "sd-dubravka-last-visit";
+      const now = Date.now();
+      const lastVisit = Number(localStorage.getItem(storageKey) || 0);
+      const twentyFourHours = 24 * 60 * 60 * 1000;
+
+      if (now - lastVisit >= twentyFourHours) {
+        localStorage.setItem(storageKey, String(now));
+
+        const { data, error } = await supabase.rpc("increment_site_visits");
+
+        if (!error) {
+          setVisitCount(Number(data || 0));
+          return;
+        }
+
+        localStorage.removeItem(storageKey);
+      }
+
+      const { data } = await supabase
+        .from("site_stats")
+        .select("value")
+        .eq("id", "visits")
+        .maybeSingle();
+
+      if (data) {
+        setVisitCount(Number(data.value || 0));
+      }
+    }
+
+    loadVisitCount();
+  }, []);
+
+  useEffect(() => {
     async function checkAdmin() {
       if (!supabase || !session?.user?.email) {
         setAdminAllowed(false);
@@ -228,46 +265,23 @@ export default function App() {
   const latestResult = finishedMatches[0];
 
   const featuredDay = useMemo(() => {
-    const datedMatches = matches
-      .filter((match) => match.scheduled_at)
+    const todayKey = localDateKey(new Date());
+
+    const todayMatches = matches
+      .filter(
+        (match) =>
+          match.scheduled_at &&
+          localDateKey(match.scheduled_at) === todayKey
+      )
       .slice()
       .sort((a, b) => new Date(a.scheduled_at) - new Date(b.scheduled_at));
 
-    if (!datedMatches.length) {
-      return {
-        title: "Sljedeće utakmice",
-        date: "",
-        matches: upcomingMatches.slice(0, 3)
-      };
-    }
-
-    const todayKey = localDateKey(new Date());
-    const todayMatches = datedMatches.filter(
-      (match) => localDateKey(match.scheduled_at) === todayKey
-    );
-
-    if (todayMatches.length) {
-      return {
-        title: "Današnje utakmice",
-        date: formatDay(todayMatches[0].scheduled_at),
-        matches: todayMatches
-      };
-    }
-
-    const nextMatch = datedMatches.find(
-      (match) => new Date(match.scheduled_at) >= new Date()
-    ) || datedMatches[0];
-
-    const nextKey = localDateKey(nextMatch.scheduled_at);
-
     return {
-      title: "Sljedeći dan turnira",
-      date: formatDay(nextMatch.scheduled_at),
-      matches: datedMatches.filter(
-        (match) => localDateKey(match.scheduled_at) === nextKey
-      )
+      title: "Današnje utakmice",
+      date: todayMatches.length ? formatDay(todayMatches[0].scheduled_at) : "",
+      matches: todayMatches
     };
-  }, [matches, upcomingMatches]);
+  }, [matches]);
 
   const finishedMatchesCount = useMemo(
     () => matches.filter((match) => match.status === "finished").length,
@@ -427,6 +441,18 @@ export default function App() {
           </div>
         </div>
 
+        <div className="footerMeta">
+          <div className="footerVisits">
+            <span aria-hidden="true">👥</span>
+            <span>Posjeta: <strong>{visitCount === null ? "—" : visitCount.toLocaleString("bs-BA")}</strong></span>
+          </div>
+
+          <div className="footerLegal">
+            <span>© 2026 Sportsko društvo Dubravka</span>
+            <span>Built by: <strong>Void.dev</strong></span>
+          </div>
+        </div>
+
         <div className="footerQr">
           <span>Skeniraj za rezultate</span>
           <QRCodeSVG
@@ -501,15 +527,27 @@ function HomeDashboard({ featuredDay, latestResult, scorers, setTab }) {
           <h2>Lokacija turnira</h2>
         </div>
 
-        <a
-          href="https://maps.app.goo.gl/XrQSRoZeoVpgBqfk7"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="locationButton"
-        >
-          <span aria-hidden="true">🧭</span>
-          Navigacija do turnira
-        </a>
+        <div className="locationActions">
+          <a
+            href="https://maps.app.goo.gl/XrQSRoZeoVpgBqfk7"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="locationButton"
+          >
+            <span aria-hidden="true">🧭</span>
+            Navigacija do turnira
+          </a>
+
+          <a
+            href="https://www.facebook.com/share/v/1EKWirY7sH/?mibextid=wwXIfr"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="locationButton locationButtonSecondary"
+          >
+            <span aria-hidden="true">🎥</span>
+            Video upute
+          </a>
+        </div>
       </section>
 
       <section className="aboutPanel">
@@ -558,7 +596,7 @@ function DayMatchesCard({ featuredDay, onAction }) {
           ))}
         </div>
       ) : (
-        <EmptyText>Utakmice još nemaju unesene termine.</EmptyText>
+        <EmptyText>Danas nema zakazanih utakmica.</EmptyText>
       )}
 
       <CardButton onClick={onAction}>Cijeli raspored</CardButton>
@@ -750,7 +788,7 @@ function AdminPanel({
   reload,
   setNotice
 }) {
-  const [email, setEmail] = useState("elizde89@gmail.com");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [matchId, setMatchId] = useState(matches[0]?.id || "");
   const [homeScore, setHomeScore] = useState("");
