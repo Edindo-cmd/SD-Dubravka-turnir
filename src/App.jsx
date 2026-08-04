@@ -30,6 +30,7 @@ const NAV_ITEMS = [
   ["pregled", "⌂", "Početna"],
   ["utakmice", "▣", "Raspored"],
   ["rezultati", "🏆", "Rezultati"],
+  ["sema", "◈", "Šema"],
   ["strijelci", "◎", "Strijelci"],
   ["ekipe", "👥", "Ekipe"],
   ["admin", "♙", "Admin"]
@@ -110,6 +111,44 @@ function shortPlayerName(name) {
   if (parts.length <= 1) return parts[0] || "Nepoznat igrač";
 
   return `${parts[0][0].toUpperCase()}. ${parts.slice(1).join(" ")}`;
+}
+
+function matchTeamId(match, side) {
+  return side === "home"
+    ? (match.home_team_id ?? match.home_team?.id)
+    : (match.away_team_id ?? match.away_team?.id);
+}
+
+function finishedMatchOutcome(match) {
+  if (
+    match?.status !== "finished" ||
+    match.home_score === null ||
+    match.away_score === null ||
+    Number(match.home_score) === Number(match.away_score)
+  ) {
+    return null;
+  }
+
+  const homeWon = Number(match.home_score) > Number(match.away_score);
+  const winnerSide = homeWon ? "home" : "away";
+  const loserSide = homeWon ? "away" : "home";
+
+  const winnerGoals = Number(homeWon ? match.home_score : match.away_score);
+  const loserGoals = Number(homeWon ? match.away_score : match.home_score);
+
+  return {
+    winner: {
+      id: matchTeamId(match, winnerSide),
+      name: matchName(match, winnerSide)
+    },
+    loser: {
+      id: matchTeamId(match, loserSide),
+      name: matchName(match, loserSide)
+    },
+    winnerGoals,
+    loserGoals,
+    loserGoalDifference: loserGoals - winnerGoals
+  };
 }
 
 function getMatchScorers(goals, matchId, teamId) {
@@ -462,6 +501,8 @@ export default function App() {
             empty="Nema završenih utakmica."
           />
         )}
+
+        {tab === "sema" && <TournamentBracket matches={matches} />}
 
         {tab === "strijelci" && <ScorersPage scorers={scorers} />}
 
@@ -820,6 +861,170 @@ function MatchListCard({ match }) {
           <span className="smallShield">{teamInitials(matchName(match, "away"))}</span>
           <strong>{matchName(match, "away")}</strong>
         </div>
+      </div>
+    </article>
+  );
+}
+
+function TournamentBracket({ matches }) {
+  const firstRound = matches
+    .filter((match) => Number(match.match_number) >= 1 && Number(match.match_number) <= 11)
+    .slice()
+    .sort((a, b) => Number(a.match_number) - Number(b.match_number));
+
+  const winners = new Map();
+  const losers = [];
+
+  for (const match of firstRound) {
+    const outcome = finishedMatchOutcome(match);
+    if (!outcome) continue;
+
+    winners.set(Number(match.match_number), outcome.winner);
+    losers.push({
+      ...outcome.loser,
+      matchNumber: Number(match.match_number),
+      goalDifference: outcome.loserGoalDifference,
+      goalsFor: outcome.loserGoals,
+      goalsAgainst: outcome.winnerGoals
+    });
+  }
+
+  const rankedLosers = losers
+    .slice()
+    .sort((a, b) =>
+      b.goalDifference - a.goalDifference ||
+      b.goalsFor - a.goalsFor ||
+      a.goalsAgainst - b.goalsAgainst ||
+      a.name.localeCompare(b.name)
+    )
+    .map((team, index) => ({
+      ...team,
+      rank: index + 1,
+      repechageCode: index < 5 ? `R${index + 1}` : null
+    }));
+
+  const repechage = rankedLosers.slice(0, 5);
+
+  const winnerLabel = (matchNumber) =>
+    winners.get(matchNumber)?.name || `Pobjednik utakmice ${matchNumber}`;
+
+  const repechageLabel = (index) =>
+    repechage[index]?.name || `R${index + 1}`;
+
+  const roundOf16 = [
+    { code: "O1", home: winnerLabel(1), away: repechageLabel(0) },
+    { code: "O2", home: winnerLabel(2), away: repechageLabel(1) },
+    { code: "O3", home: winnerLabel(3), away: winnerLabel(4) },
+    { code: "O4", home: winnerLabel(5), away: repechageLabel(2) },
+    { code: "O5", home: winnerLabel(6), away: winnerLabel(7) },
+    { code: "O6", home: winnerLabel(8), away: repechageLabel(3) },
+    { code: "O7", home: winnerLabel(9), away: repechageLabel(4) },
+    { code: "O8", home: winnerLabel(10), away: winnerLabel(11) }
+  ];
+
+  const completedFirstRound = winners.size;
+  const repechageLocked = completedFirstRound === 11;
+
+  return (
+    <section>
+      <PageHeading
+        eyebrow="Eliminacijski sistem"
+        title="Šema turnira"
+        subtitle="Pobjednici prvog kola i pet najbolje rangiranih poraženih ekipa"
+      />
+
+      <section className="bracketProgress">
+        <div>
+          <strong>{completedFirstRound}/11</strong>
+          <span>završenih utakmica prvog kola</span>
+        </div>
+        <div className="bracketProgressBar">
+          <span style={{ width: `${(completedFirstRound / 11) * 100}%` }} />
+        </div>
+        <small>
+          {repechageLocked
+            ? "Repešaž je zaključen."
+            : "Raspored R1–R5 je privremen dok se ne završi svih 11 utakmica."}
+        </small>
+      </section>
+
+      <div className="bracketLayout">
+        <section className="bracketRound">
+          <h2>Osmina finala</h2>
+          <div className="bracketMatches">
+            {roundOf16.map((match) => (
+              <BracketMatchCard key={match.code} match={match} />
+            ))}
+          </div>
+        </section>
+
+        <section className="bracketRound">
+          <h2>Četvrtfinale</h2>
+          <div className="bracketMatches quarterfinalMatches">
+            <BracketMatchCard match={{ code: "ČF1", home: "Pobjednik O1", away: "Pobjednik O2" }} />
+            <BracketMatchCard match={{ code: "ČF2", home: "Pobjednik O3", away: "Pobjednik O4" }} />
+            <BracketMatchCard match={{ code: "ČF3", home: "Pobjednik O5", away: "Pobjednik O6" }} />
+            <BracketMatchCard match={{ code: "ČF4", home: "Pobjednik O7", away: "Pobjednik O8" }} />
+          </div>
+        </section>
+
+        <section className="bracketRound">
+          <h2>Polufinale</h2>
+          <div className="bracketMatches semifinalMatches">
+            <BracketMatchCard match={{ code: "PF1", home: "Pobjednik ČF1", away: "Pobjednik ČF2" }} />
+            <BracketMatchCard match={{ code: "PF2", home: "Pobjednik ČF3", away: "Pobjednik ČF4" }} />
+          </div>
+        </section>
+
+        <section className="bracketRound finalRound">
+          <h2>Finale</h2>
+          <div className="bracketMatches finalMatches">
+            <BracketMatchCard match={{ code: "F", home: "Pobjednik PF1", away: "Pobjednik PF2" }} />
+          </div>
+        </section>
+      </div>
+
+      <section className="repechageCard">
+        <div className="repechageHeader">
+          <div>
+            <span className="kicker">Repešaž</span>
+            <h2>Najbolje poražene ekipe</h2>
+          </div>
+          <small>Gol-razlika → više postignutih golova</small>
+        </div>
+
+        {rankedLosers.length ? (
+          <div className="repechageTable">
+            {rankedLosers.map((team) => (
+              <div
+                className={`repechageRow ${team.rank <= 5 ? "qualified" : ""}`}
+                key={`${team.matchNumber}-${team.name}`}
+              >
+                <span className="repechageRank">
+                  {team.repechageCode || team.rank}
+                </span>
+                <strong>{team.name}</strong>
+                <span>GR {team.goalDifference}</span>
+                <span>{team.goalsFor} datih</span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <EmptyText>Repešaž tabela će se pojaviti nakon prvih završenih utakmica.</EmptyText>
+        )}
+      </section>
+    </section>
+  );
+}
+
+function BracketMatchCard({ match }) {
+  return (
+    <article className="bracketMatchCard">
+      <span className="bracketMatchCode">{match.code}</span>
+      <div>
+        <strong>{match.home}</strong>
+        <span>VS</span>
+        <strong>{match.away}</strong>
       </div>
     </article>
   );

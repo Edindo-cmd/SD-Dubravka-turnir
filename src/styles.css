@@ -903,6 +903,196 @@ button:focus-visible, input:focus-visible, select:focus-visible {
   border-radius: 8px;
 }
 
+
+.bracketProgress {
+  margin-bottom: 20px;
+  padding: 18px;
+  border-radius: 16px;
+  background: linear-gradient(145deg, rgba(10,27,41,.95), rgba(4,14,23,.98));
+  border: 1px solid rgba(214,158,23,.25);
+}
+
+.bracketProgress > div:first-child {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.bracketProgress strong {
+  color: var(--gold-bright);
+  font-size: 1.45rem;
+}
+
+.bracketProgress span,
+.bracketProgress small {
+  color: var(--muted);
+}
+
+.bracketProgressBar {
+  height: 8px;
+  margin: 12px 0 9px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255,255,255,.07);
+}
+
+.bracketProgressBar span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--gold), var(--gold-bright));
+  transition: width .3s ease;
+}
+
+.bracketLayout {
+  display: grid;
+  grid-template-columns: 1.45fr 1.15fr .95fr .85fr;
+  gap: 16px;
+  align-items: stretch;
+  overflow-x: auto;
+  padding-bottom: 8px;
+}
+
+.bracketRound {
+  min-width: 230px;
+  padding: 14px;
+  border-radius: 16px;
+  background: linear-gradient(145deg, rgba(10,27,41,.92), rgba(4,14,23,.98));
+  border: 1px solid rgba(255,255,255,.1);
+}
+
+.bracketRound h2 {
+  margin: 0 0 13px;
+  color: var(--gold-bright);
+  font-size: .83rem;
+  letter-spacing: .08em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.bracketMatches {
+  display: grid;
+  gap: 10px;
+}
+
+.quarterfinalMatches {
+  padding-top: 42px;
+  gap: 54px;
+}
+
+.semifinalMatches {
+  padding-top: 118px;
+  gap: 160px;
+}
+
+.finalMatches {
+  padding-top: 286px;
+}
+
+.bracketMatchCard {
+  position: relative;
+  padding: 10px;
+  border-radius: 11px;
+  background: rgba(0,0,0,.18);
+  border: 1px solid rgba(245,199,78,.2);
+}
+
+.bracketMatchCode {
+  position: absolute;
+  top: -8px;
+  left: 10px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  color: #111;
+  background: var(--gold-bright);
+  font-size: .58rem;
+  font-weight: 900;
+}
+
+.bracketMatchCard > div {
+  display: grid;
+  grid-template-columns: minmax(0,1fr) 28px minmax(0,1fr);
+  align-items: center;
+  gap: 5px;
+}
+
+.bracketMatchCard strong {
+  font-size: .69rem;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.bracketMatchCard strong:last-child {
+  text-align: right;
+}
+
+.bracketMatchCard div span {
+  color: var(--gold-bright);
+  font-size: .63rem;
+  font-weight: 900;
+  text-align: center;
+}
+
+.repechageCard {
+  margin-top: 20px;
+  padding: 20px;
+  border-radius: 17px;
+  background: linear-gradient(145deg, rgba(9,24,37,.95), rgba(4,14,23,.98));
+  border: 1px solid rgba(214,158,23,.28);
+}
+
+.repechageHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: 15px;
+  margin-bottom: 14px;
+}
+
+.repechageHeader h2 {
+  margin: 4px 0 0;
+}
+
+.repechageHeader small {
+  color: var(--muted);
+}
+
+.repechageTable {
+  display: grid;
+  gap: 7px;
+}
+
+.repechageRow {
+  display: grid;
+  grid-template-columns: 42px minmax(0,1fr) 68px 70px;
+  align-items: center;
+  gap: 9px;
+  padding: 10px;
+  border-radius: 10px;
+  color: var(--muted);
+  background: rgba(255,255,255,.035);
+  border: 1px solid rgba(255,255,255,.065);
+  font-size: .75rem;
+}
+
+.repechageRow.qualified {
+  color: #fff;
+  border-color: rgba(245,199,78,.26);
+  background: rgba(214,158,23,.075);
+}
+
+.repechageRank {
+  display: grid;
+  place-items: center;
+  min-width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  color: var(--gold-bright);
+  background: rgba(214,158,23,.11);
+  font-weight: 900;
+}
+
 .scorersTableCard { min-height: auto; }
 
 .fullScorerRow {
@@ -1489,6 +1679,42 @@ footer {
   .featuredScore strong { font-size: 1.35rem; }
   .pageHeading h1 { font-size: 2.15rem; }
 
+  .bracketProgress > div:first-child {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .bracketLayout {
+    display: grid;
+    grid-template-columns: 1fr;
+    overflow: visible;
+  }
+
+  .bracketRound {
+    min-width: 0;
+  }
+
+  .quarterfinalMatches,
+  .semifinalMatches,
+  .finalMatches {
+    padding-top: 0;
+    gap: 10px;
+  }
+
+  .repechageHeader {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .repechageRow {
+    grid-template-columns: 38px minmax(0,1fr) 54px;
+  }
+
+  .repechageRow span:last-child {
+    display: none;
+  }
+
   .matchListMeta {
     flex-direction: column;
     gap: 5px;
@@ -1550,7 +1776,9 @@ footer {
     inset: auto 0 0;
     z-index: 60;
     display: grid;
-    grid-template-columns: repeat(6, 1fr);
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(66px, 1fr);
+    overflow-x: auto;
     gap: 3px;
     padding: 7px 7px calc(7px + env(safe-area-inset-bottom));
     background: rgba(2, 8, 14, .97);
