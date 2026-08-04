@@ -101,6 +101,45 @@ function teamInitials(name) {
     .toUpperCase();
 }
 
+function shortPlayerName(name) {
+  const parts = String(name || "Nepoznat igrač")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+
+  if (parts.length === 1) return parts[0];
+
+  const firstInitial = parts[0][0]?.toUpperCase() || "";
+  const surname = parts.slice(1).join(" ");
+
+  return `${firstInitial}. ${surname}`;
+}
+
+function matchScorers(goals, matchId, teamId) {
+  const grouped = new Map();
+
+  for (const goal of goals) {
+    if (goal.match_id !== matchId || goal.team_id !== teamId) continue;
+
+    const name =
+      goal.player?.name ||
+      goal.player_name_override ||
+      "Nepoznat igrač";
+
+    grouped.set(
+      name,
+      (grouped.get(name) || 0) + Number(goal.quantity || 1)
+    );
+  }
+
+  return [...grouped.entries()]
+    .map(([name, goalsCount]) => ({
+      name: shortPlayerName(name),
+      goals: goalsCount
+    }))
+    .sort((a, b) => b.goals - a.goals || a.name.localeCompare(b.name));
+}
+
 export default function App() {
   const [tab, setTab] = useState("pregled");
   const [matches, setMatches] = useState(fallbackMatches);
@@ -401,6 +440,7 @@ export default function App() {
             featuredDay={featuredDay}
             latestResult={latestResult}
             scorers={scorers}
+            goals={goals}
             setTab={setTab}
           />
         )}
@@ -488,7 +528,7 @@ export default function App() {
   );
 }
 
-function HomeDashboard({ featuredDay, latestResult, scorers, setTab }) {
+function HomeDashboard({ featuredDay, latestResult, scorers, goals, setTab }) {
   return (
     <>
       <section className="dashboardGrid">
@@ -501,6 +541,8 @@ function HomeDashboard({ featuredDay, latestResult, scorers, setTab }) {
           title="Posljednji rezultat"
           icon="🏆"
           match={latestResult}
+          goals={goals}
+          showScorers
           action="Svi rezultati"
           onAction={() => setTab("rezultati")}
           empty="Rezultati još nisu uneseni."
@@ -611,7 +653,29 @@ function DayMatchesCard({ featuredDay, onAction }) {
   );
 }
 
-function FeatureMatchCard({ title, icon, match, action, onAction, empty }) {
+function FeatureMatchCard({
+  title,
+  icon,
+  match,
+  goals = [],
+  showScorers = false,
+  action,
+  onAction,
+  empty
+}) {
+  const homeTeamId = match?.home_team?.id || match?.home_team_id;
+  const awayTeamId = match?.away_team?.id || match?.away_team_id;
+
+  const homeScorers =
+    match && showScorers
+      ? matchScorers(goals, match.id, homeTeamId)
+      : [];
+
+  const awayScorers =
+    match && showScorers
+      ? matchScorers(goals, match.id, awayTeamId)
+      : [];
+
   return (
     <section className="sportCard featureCard">
       <CardTitle icon={icon} title={title} />
@@ -625,12 +689,22 @@ function FeatureMatchCard({ title, icon, match, action, onAction, empty }) {
           <div className="matchNumber">Utakmica {match.match_number || "–"}</div>
 
           <div className="featuredTeams">
-            <TeamBadge name={matchName(match, "home")} />
+            <TeamBadge
+              name={matchName(match, "home")}
+              scorers={homeScorers}
+              showScorers={showScorers}
+            />
+
             <div className="featuredScore">
               <strong>{score(match)}</strong>
               <small>{formatDate(match.scheduled_at)}</small>
             </div>
-            <TeamBadge name={matchName(match, "away")} />
+
+            <TeamBadge
+              name={matchName(match, "away")}
+              scorers={awayScorers}
+              showScorers={showScorers}
+            />
           </div>
         </>
       ) : (
@@ -642,7 +716,38 @@ function FeatureMatchCard({ title, icon, match, action, onAction, empty }) {
   );
 }
 
-function TeamBadge({ name }) {
+function TeamBadge({ name, scorers = [], showScorers = false }) {
+  return (
+    <div className="teamBadge">
+      <div className="teamShield">{teamInitials(name)}</div>
+      <strong>{name}</strong>
+
+      {showScorers && (
+        <div className="matchScorers">
+          {scorers.length ? (
+            scorers.map((scorer) => (
+              <div className="matchScorerRow" key={`${name}-${scorer.name}`}>
+                <span>{scorer.name}</span>
+                <span
+                  className="goalBalls"
+                  aria-label={`${scorer.goals} ${scorer.goals === 1 ? "gol" : "golova"}`}
+                >
+                  {Array.from({ length: scorer.goals }, (_, index) => (
+                    <span aria-hidden="true" key={index}>⚽</span>
+                  ))}
+                </span>
+              </div>
+            ))
+          ) : (
+            <small className="noScorers">Bez evidentiranih strijelaca</small>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CardTitle({ name }) {
   return (
     <div className="teamBadge">
       <div className="teamShield">{teamInitials(name)}</div>
