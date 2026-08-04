@@ -256,7 +256,20 @@ export default function App() {
   );
 
   const finishedMatches = useMemo(
-    () => matches.filter((match) => match.status === "finished").slice().reverse(),
+    () =>
+      matches
+        .filter((match) => match.status === "finished")
+        .slice()
+        .sort((a, b) => {
+          if (a.scheduled_at && b.scheduled_at) {
+            return new Date(b.scheduled_at) - new Date(a.scheduled_at);
+          }
+
+          if (a.scheduled_at) return -1;
+          if (b.scheduled_at) return 1;
+
+          return (b.match_number || 0) - (a.match_number || 0);
+        }),
     [matches]
   );
 
