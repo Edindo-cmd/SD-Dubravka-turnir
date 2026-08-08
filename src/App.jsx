@@ -21,6 +21,9 @@ const fallbackMatches = [
   away_label: away,
   home_score: null,
   away_score: null,
+  decided_on_penalties: false,
+  home_penalties: null,
+  away_penalties: null,
   status: "scheduled",
   scheduled_at: null,
   evening: null
@@ -44,7 +47,18 @@ function matchName(match, side) {
 
 function score(match) {
   if (match.home_score === null || match.away_score === null) return "VS";
-  return `${match.home_score} : ${match.away_score}`;
+
+  const regularScore = `${match.home_score} : ${match.away_score}`;
+
+  if (
+    match.decided_on_penalties &&
+    match.home_penalties !== null &&
+    match.away_penalties !== null
+  ) {
+    return `${regularScore} (pen. ${match.home_penalties} : ${match.away_penalties})`;
+  }
+
+  return regularScore;
 }
 
 function formatDate(value) {
@@ -123,13 +137,31 @@ function finishedMatchOutcome(match) {
   if (
     match?.status !== "finished" ||
     match.home_score === null ||
-    match.away_score === null ||
-    Number(match.home_score) === Number(match.away_score)
+    match.away_score === null
   ) {
     return null;
   }
 
-  const homeWon = Number(match.home_score) > Number(match.away_score);
+  const homeScore = Number(match.home_score);
+  const awayScore = Number(match.away_score);
+
+  let homeWon;
+
+  if (homeScore === awayScore) {
+    if (
+      !match.decided_on_penalties ||
+      match.home_penalties === null ||
+      match.away_penalties === null ||
+      Number(match.home_penalties) === Number(match.away_penalties)
+    ) {
+      return null;
+    }
+
+    homeWon = Number(match.home_penalties) > Number(match.away_penalties);
+  } else {
+    homeWon = homeScore > awayScore;
+  }
+
   const winnerSide = homeWon ? "home" : "away";
   const loserSide = homeWon ? "away" : "home";
 
@@ -147,7 +179,8 @@ function finishedMatchOutcome(match) {
     },
     winnerGoals,
     loserGoals,
-    loserGoalDifference: loserGoals - winnerGoals
+    loserGoalDifference: loserGoals - winnerGoals,
+    decidedOnPenalties: Boolean(match.decided_on_penalties)
   };
 }
 
@@ -1226,6 +1259,9 @@ function AdminPanel({
   const [matchId, setMatchId] = useState(matches[0]?.id || "");
   const [homeScore, setHomeScore] = useState("");
   const [awayScore, setAwayScore] = useState("");
+  const [decidedOnPenalties, setDecidedOnPenalties] = useState(false);
+  const [homePenalties, setHomePenalties] = useState("");
+  const [awayPenalties, setAwayPenalties] = useState("");
   const [status, setStatus] = useState("scheduled");
   const [scheduledAt, setScheduledAt] = useState("");
   const [playerTeam, setPlayerTeam] = useState("");
@@ -1249,6 +1285,9 @@ function AdminPanel({
 
     setHomeScore(match.home_score ?? "");
     setAwayScore(match.away_score ?? "");
+    setDecidedOnPenalties(Boolean(match.decided_on_penalties));
+    setHomePenalties(match.home_penalties ?? "");
+    setAwayPenalties(match.away_penalties ?? "");
     setStatus(match.status || "scheduled");
     setScheduledAt(match.scheduled_at ? match.scheduled_at.slice(0, 16) : "");
   }, [matchId, matches]);
@@ -1287,11 +1326,46 @@ function AdminPanel({
   async function saveMatch(event) {
     event.preventDefault();
 
+    const numericHomeScore = homeScore === "" ? null : Number(homeScore);
+    const numericAwayScore = awayScore === "" ? null : Number(awayScore);
+    const numericHomePenalties = homePenalties === "" ? null : Number(homePenalties);
+    const numericAwayPenalties = awayPenalties === "" ? null : Number(awayPenalties);
+
+    if (
+      decidedOnPenalties &&
+      numericHomeScore !== null &&
+      numericAwayScore !== null &&
+      numericHomeScore !== numericAwayScore
+    ) {
+      setNotice("Penali se mogu evidentirati samo kada je rezultat utakmice neriješen.");
+      return;
+    }
+
+    if (
+      status === "finished" &&
+      numericHomeScore !== null &&
+      numericAwayScore !== null &&
+      numericHomeScore === numericAwayScore
+    ) {
+      if (
+        !decidedOnPenalties ||
+        numericHomePenalties === null ||
+        numericAwayPenalties === null ||
+        numericHomePenalties === numericAwayPenalties
+      ) {
+        setNotice("Kod neriješenog završnog rezultata unesi pobjednika nakon penala.");
+        return;
+      }
+    }
+
     const { error } = await supabase
       .from("matches")
       .update({
-        home_score: homeScore === "" ? null : Number(homeScore),
-        away_score: awayScore === "" ? null : Number(awayScore),
+        home_score: numericHomeScore,
+        away_score: numericAwayScore,
+        decided_on_penalties: decidedOnPenalties,
+        home_penalties: decidedOnPenalties ? numericHomePenalties : null,
+        away_penalties: decidedOnPenalties ? numericAwayPenalties : null,
         status,
         scheduled_at: scheduledAt ? new Date(scheduledAt).toISOString() : null
       })
@@ -1465,6 +1539,60 @@ function AdminPanel({
               />
             </div>
           </div>
+
+          <label className="penaltyToggle">
+            <input
+              type="checkbox"
+              checked={decidedOnPenalties}
+              onChange={(event) => {
+                const checked = event.target.checked;
+                setDecidedOnPenalties(checked);
+
+                if (!checked) {
+                  setHomePenalties("");
+                  setAwayPenalties("");
+                }
+              }}
+            />
+            <span>Utakmica je odlučena izvođenjem penala</span>
+          </label>
+
+          {decidedOnPenalties && (
+            <div className="penaltyPanel">
+              <div className="penaltyPanelTitle">
+                <span aria-hidden="true">⚽</span>
+                Rezultat penala
+              </div>
+
+              <div className="scoreInputs">
+                <div>
+                  <label>Penali — domaćin</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={homePenalties}
+                    onChange={(event) => setHomePenalties(event.target.value)}
+                    required={decidedOnPenalties}
+                  />
+                </div>
+
+                <div>
+                  <label>Penali — gost</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={awayPenalties}
+                    onChange={(event) => setAwayPenalties(event.target.value)}
+                    required={decidedOnPenalties}
+                  />
+                </div>
+              </div>
+
+              <small>
+                Primjer: regularni rezultat 2:2, penali 4:3.
+              </small>
+            </div>
+          )}
 
           <label>Status</label>
           <select value={status} onChange={(event) => setStatus(event.target.value)}>

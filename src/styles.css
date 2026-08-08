@@ -460,7 +460,11 @@ button:focus-visible, input:focus-visible, select:focus-visible {
   text-align: center;
 }
 
-.featuredScore strong { font-size: 1.75rem; }
+.featuredScore strong {
+  font-size: 1.75rem;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
 .featuredScore small {
   margin-top: 8px;
   color: var(--muted);
@@ -893,7 +897,9 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 .matchListTeams > b {
   text-align: center;
   color: var(--gold-bright);
-  font-size: 1.3rem;
+  font-size: 1.15rem;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
 }
 
 .smallShield {
@@ -1446,6 +1452,50 @@ select option { color: #111; }
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 10px;
+}
+
+.penaltyToggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 12px;
+  border-radius: 10px;
+  color: #e4e9ed;
+  background: rgba(214,158,23,.07);
+  border: 1px solid rgba(245,199,78,.22);
+  cursor: pointer;
+}
+
+.penaltyToggle input {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+  accent-color: var(--gold);
+}
+
+.penaltyPanel {
+  display: grid;
+  gap: 10px;
+  padding: 13px;
+  border-radius: 11px;
+  background: rgba(0,0,0,.16);
+  border: 1px solid rgba(245,199,78,.18);
+}
+
+.penaltyPanelTitle {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--gold-bright);
+  font-size: .8rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.penaltyPanel small {
+  color: var(--muted);
+  font-size: .7rem;
+  line-height: 1.4;
 }
 
 .scoreInputs > div {
