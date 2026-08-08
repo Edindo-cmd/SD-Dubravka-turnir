@@ -987,7 +987,8 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 
 .directPassCard p {
   margin: 0;
-  color: var(--muted);
+  color: #bfe7d0;
+  font-weight: 800;
 }
 
 .repechageCard,
@@ -1095,6 +1096,26 @@ button:focus-visible, input:focus-visible, select:focus-visible {
   display: grid;
   grid-template-columns: repeat(2, minmax(0,1fr));
   gap: 9px;
+}
+
+.qualifiedGroups {
+  display: grid;
+  gap: 18px;
+}
+
+.qualifiedGroup {
+  padding: 14px;
+  border-radius: 13px;
+  background: rgba(0,0,0,.12);
+  border: 1px solid rgba(255,255,255,.065);
+}
+
+.qualifiedGroup h3 {
+  margin: 0 0 11px;
+  color: var(--gold-bright);
+  font-size: .78rem;
+  letter-spacing: .08em;
+  text-transform: uppercase;
 }
 
 .qualifiedTeam {

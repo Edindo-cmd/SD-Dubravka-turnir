@@ -967,13 +967,15 @@ function TournamentBracket({ matches }) {
       name: item.winner.name
     }));
 
+  const directPassTeam = {
+    source: "Direktan prolaz iz repasaža",
+    id: "direct-kmf-nevesinje",
+    name: "KMF Nevesinje"
+  };
+
   const qualifiedTeams = [
     ...firstRoundWinners,
-    {
-      source: "Direktan prolaz iz repešaža",
-      id: "direct-kmf-nevesinje",
-      name: "KMF Nevesinje"
-    },
+    directPassTeam,
     ...repechageWinners
   ];
 
@@ -981,12 +983,18 @@ function TournamentBracket({ matches }) {
   const repechageCompleted = repechageWinners.length;
   const allQualifiedKnown = firstRoundCompleted === 11 && repechageCompleted === 4;
 
+  const tournamentStatus = allQualifiedKnown
+    ? "Repasaž završen • Čeka se žrijeb"
+    : firstRoundCompleted === 11
+      ? "Prvo kolo završeno • U toku je repasaž"
+      : "Prvo kolo u toku";
+
   return (
     <section>
       <PageHeading
         eyebrow="Nastavak turnira"
-        title="Turnir i repešaž"
-        subtitle="Nakon repešaža slijedi novi žrijeb parova za završnih 16 ekipa"
+        title="Turnir 2026"
+        subtitle={tournamentStatus}
       />
 
       <section className="bracketProgress">
@@ -1002,17 +1010,17 @@ function TournamentBracket({ matches }) {
       <section className="directPassCard">
         <span className="directPassIcon" aria-hidden="true">★</span>
         <div>
-          <small>Direktan prolaz iz repešaža</small>
+          <small>Direktan prolaz</small>
           <h2>KMF Nevesinje</h2>
-          <p>Ekipa prolazi dalje bez dodatne utakmice.</p>
+          <p>✓ Plasman među 16 najboljih</p>
         </div>
       </section>
 
       <section className="repechageCard">
         <div className="repechageHeader">
           <div>
-            <span className="kicker">Repešaž</span>
-            <h2>Utakmice repešaža</h2>
+            <span className="kicker">Repasaž</span>
+            <h2>Utakmice repasaža</h2>
           </div>
           <small>4 utakmice • 4 pobjednika idu dalje</small>
         </div>
@@ -1054,39 +1062,71 @@ function TournamentBracket({ matches }) {
       <section className="qualifiedCard">
         <div className="repechageHeader">
           <div>
-            <span className="kicker">Sljedeća faza</span>
-            <h2>Ekipe koje su prošle dalje</h2>
+            <span className="kicker">Završnica</span>
+            <h2>Plasirani u završnicu</h2>
           </div>
-          <small>{qualifiedTeams.length}/16 poznato</small>
+          <small>
+            {allQualifiedKnown
+              ? "✓ Poznato svih 16 ekipa"
+              : `${qualifiedTeams.length} od 16 ekipa osiguralo plasman`}
+          </small>
         </div>
 
-        <div className="qualifiedTeamsGrid">
-          {qualifiedTeams.map((team, index) => (
-            <div className="qualifiedTeam" key={`${team.source}-${team.name}`}>
-              <span>{index + 1}</span>
-              <div>
-                <strong>{team.name}</strong>
-                <small>{team.source}</small>
-              </div>
+        <div className="qualifiedGroups">
+          <section className="qualifiedGroup">
+            <h3>Pobjednici prvog kola</h3>
+            <div className="qualifiedTeamsGrid">
+              {firstRoundWinners.map((team, index) => (
+                <div className="qualifiedTeam" key={`${team.source}-${team.name}`}>
+                  <span>{index + 1}</span>
+                  <div>
+                    <strong>{team.name}</strong>
+                    <small>{team.source}</small>
+                  </div>
+                </div>
+              ))}
             </div>
-          ))}
+          </section>
 
-          {Array.from({ length: Math.max(0, 16 - qualifiedTeams.length) }, (_, index) => (
-            <div className="qualifiedTeam pending" key={`pending-${index}`}>
-              <span>–</span>
-              <div>
-                <strong>Čeka se pobjednik repešaža</strong>
-                <small>Mjesto još nije popunjeno</small>
+          <section className="qualifiedGroup">
+            <h3>Iz repasaža</h3>
+            <div className="qualifiedTeamsGrid">
+              <div className="qualifiedTeam">
+                <span>★</span>
+                <div>
+                  <strong>{directPassTeam.name}</strong>
+                  <small>Direktan prolaz</small>
+                </div>
               </div>
+
+              {repechageWinners.map((team) => (
+                <div className="qualifiedTeam" key={`${team.source}-${team.name}`}>
+                  <span>✓</span>
+                  <div>
+                    <strong>{team.name}</strong>
+                    <small>{team.source}</small>
+                  </div>
+                </div>
+              ))}
+
+              {Array.from({ length: Math.max(0, 4 - repechageWinners.length) }, (_, index) => (
+                <div className="qualifiedTeam pending" key={`repechage-pending-${index}`}>
+                  <span>–</span>
+                  <div>
+                    <strong>Čeka se pobjednik repasaža</strong>
+                    <small>Mjesto još nije popunjeno</small>
+                  </div>
+                </div>
+              ))}
             </div>
-          ))}
+          </section>
         </div>
 
         <div className={`drawNotice ${allQualifiedKnown ? "ready" : ""}`}>
           <strong>
             {allQualifiedKnown
-              ? "16 ekipa je poznato — čeka se žrijeb naredne faze."
-              : "Nakon završetka repešaža prikazat će se svih 16 ekipa."}
+              ? "Čeka se zvanični žrijeb osmine finala."
+              : "Nakon završetka repasaža prikazat će se svih 16 ekipa."}
           </strong>
           <span>
             Parovi naredne faze neće se automatski određivati; unijet ćemo ih nakon zvaničnog žrijeba.
