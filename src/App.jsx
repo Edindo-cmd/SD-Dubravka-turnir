@@ -1002,6 +1002,9 @@ function TournamentBracket({ matches }) {
     });
 
   const roundOf16DrawReady = roundOf16Matches.length > 0;
+  const roundOf16Completed = roundOf16Matches.filter(
+    (match) => match.status === "finished"
+  ).length;
 
   const tournamentStatus = roundOf16DrawReady
     ? "Žrijeb osmine finala završen • Poznati su parovi"
@@ -1061,13 +1064,38 @@ function TournamentBracket({ matches }) {
         </section>
       )}
 
-      <section className="bracketProgress">
-        <div>
-          <strong>{firstRoundCompleted}/11</strong>
-          <span>završenih utakmica prvog kola</span>
+      <section className="tournamentPhaseProgress">
+        <div className="phaseProgressItem completed">
+          <div className="phaseProgressTop">
+            <span>Prvo kolo</span>
+            <strong>{firstRoundCompleted}/11</strong>
+          </div>
+          <div className="bracketProgressBar">
+            <span style={{ width: `${Math.min(100, (firstRoundCompleted / 11) * 100)}%` }} />
+          </div>
+          <small>Završene utakmice</small>
         </div>
-        <div className="bracketProgressBar">
-          <span style={{ width: `${Math.min(100, (firstRoundCompleted / 11) * 100)}%` }} />
+
+        <div className={`phaseProgressItem ${repechageCompleted === 4 ? "completed" : ""}`}>
+          <div className="phaseProgressTop">
+            <span>Repasaž</span>
+            <strong>{repechageCompleted}/4</strong>
+          </div>
+          <div className="bracketProgressBar">
+            <span style={{ width: `${Math.min(100, (repechageCompleted / 4) * 100)}%` }} />
+          </div>
+          <small>Završene utakmice</small>
+        </div>
+
+        <div className={`phaseProgressItem current ${roundOf16Completed === 8 ? "completed" : ""}`}>
+          <div className="phaseProgressTop">
+            <span>Osmina finala</span>
+            <strong>{roundOf16Completed}/8</strong>
+          </div>
+          <div className="bracketProgressBar">
+            <span style={{ width: `${Math.min(100, (roundOf16Completed / 8) * 100)}%` }} />
+          </div>
+          <small>Završene utakmice</small>
         </div>
       </section>
 

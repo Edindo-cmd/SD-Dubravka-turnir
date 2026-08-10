@@ -1013,6 +1013,61 @@ button:focus-visible, input:focus-visible, select:focus-visible {
   text-align: center;
 }
 
+.tournamentPhaseProgress {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 11px;
+  margin-bottom: 20px;
+}
+
+.phaseProgressItem {
+  padding: 15px;
+  border-radius: 14px;
+  background: linear-gradient(145deg, rgba(10,27,41,.95), rgba(4,14,23,.98));
+  border: 1px solid rgba(255,255,255,.09);
+}
+
+.phaseProgressItem.current {
+  border-color: rgba(245,199,78,.42);
+  box-shadow: inset 0 0 0 1px rgba(245,199,78,.06);
+}
+
+.phaseProgressItem.completed {
+  border-color: rgba(39,201,120,.24);
+}
+
+.phaseProgressTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 9px;
+}
+
+.phaseProgressTop > span {
+  color: #fff;
+  font-size: .72rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: .045em;
+}
+
+.phaseProgressTop strong {
+  color: var(--gold-bright);
+  font-size: 1.15rem;
+}
+
+.phaseProgressItem.completed .phaseProgressTop strong {
+  color: #8fe0b5;
+}
+
+.phaseProgressItem small {
+  display: block;
+  margin-top: 7px;
+  color: var(--muted);
+  font-size: .62rem;
+}
+
 .bracketProgress {
   margin-bottom: 20px;
   padding: 18px;
@@ -1959,6 +2014,10 @@ footer {
 
   .featuredScore strong { font-size: 1.35rem; }
   .pageHeading h1 { font-size: 2.15rem; }
+
+  .tournamentPhaseProgress {
+    grid-template-columns: 1fr;
+  }
 
   .roundOf16Header,
   .bracketProgress > div:first-child,
