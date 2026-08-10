@@ -930,6 +930,89 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 }
 
 
+.roundOf16Card {
+  margin-bottom: 20px;
+  padding: 20px;
+  border-radius: 17px;
+  background: linear-gradient(145deg, rgba(11,30,45,.97), rgba(4,14,23,.99));
+  border: 1px solid rgba(245,199,78,.42);
+  box-shadow: 0 22px 60px rgba(0,0,0,.28);
+}
+
+.roundOf16Header {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.roundOf16Header h2 {
+  margin: 4px 0 0;
+  font-size: 1.2rem;
+}
+
+.roundOf16Header small {
+  color: var(--muted);
+}
+
+.roundOf16Grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0,1fr));
+  gap: 12px;
+}
+
+.roundOf16Match {
+  padding: 14px;
+  border-radius: 13px;
+  background: rgba(0,0,0,.17);
+  border: 1px solid rgba(255,255,255,.085);
+}
+
+.roundOf16MatchTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 12px;
+  color: var(--muted);
+  font-size: .66rem;
+}
+
+.roundOf16Teams {
+  display: grid;
+  grid-template-columns: minmax(0,1fr) 56px minmax(0,1fr);
+  align-items: center;
+  gap: 8px;
+}
+
+.roundOf16Teams strong {
+  font-size: .82rem;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.roundOf16Teams strong:last-child {
+  text-align: right;
+}
+
+.roundOf16Score {
+  color: var(--gold-bright);
+  text-align: center;
+  font-size: 1rem;
+  font-weight: 900;
+  line-height: 1.2;
+}
+
+.roundOf16Time {
+  margin-top: 11px;
+  padding-top: 9px;
+  border-top: 1px solid rgba(255,255,255,.07);
+  color: var(--muted);
+  font-size: .68rem;
+  text-align: center;
+}
+
 .bracketProgress {
   margin-bottom: 20px;
   padding: 18px;
@@ -1877,6 +1960,7 @@ footer {
   .featuredScore strong { font-size: 1.35rem; }
   .pageHeading h1 { font-size: 2.15rem; }
 
+  .roundOf16Header,
   .bracketProgress > div:first-child,
   .repechageHeader {
     align-items: flex-start;
@@ -1884,9 +1968,19 @@ footer {
     gap: 4px;
   }
 
+  .roundOf16Grid,
   .repechageMatchGrid,
   .qualifiedTeamsGrid {
     grid-template-columns: 1fr;
+  }
+
+  .roundOf16Teams {
+    grid-template-columns: 1fr;
+    text-align: center;
+  }
+
+  .roundOf16Teams strong:last-child {
+    text-align: center;
   }
 
   .repechageTeams {

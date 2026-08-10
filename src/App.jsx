@@ -987,11 +987,29 @@ function TournamentBracket({ matches }) {
   const repechageCompleted = repechageWinners.length;
   const allQualifiedKnown = firstRoundCompleted === 11 && repechageCompleted === 4;
 
-  const tournamentStatus = allQualifiedKnown
-    ? "Repasaž završen • Čeka se žrijeb"
-    : firstRoundCompleted === 11
-      ? "Prvo kolo završeno • U toku je repasaž"
-      : "Prvo kolo u toku";
+  const roundOf16Matches = matches
+    .filter((match) => normalizeTeamName(match.round_name) === normalizeTeamName("Osmina finala"))
+    .slice()
+    .sort((a, b) => {
+      if (a.scheduled_at && b.scheduled_at) {
+        return new Date(a.scheduled_at) - new Date(b.scheduled_at);
+      }
+
+      if (a.scheduled_at) return -1;
+      if (b.scheduled_at) return 1;
+
+      return (Number(a.match_number) || 0) - (Number(b.match_number) || 0);
+    });
+
+  const roundOf16DrawReady = roundOf16Matches.length > 0;
+
+  const tournamentStatus = roundOf16DrawReady
+    ? "Žrijeb osmine finala završen • Poznati su parovi"
+    : allQualifiedKnown
+      ? "Repasaž završen • Čeka se žrijeb"
+      : firstRoundCompleted === 11
+        ? "Prvo kolo završeno • U toku je repasaž"
+        : "Prvo kolo u toku";
 
   return (
     <section>
@@ -1000,6 +1018,48 @@ function TournamentBracket({ matches }) {
         title="Turnir 2026"
         subtitle={tournamentStatus}
       />
+
+      {roundOf16DrawReady && (
+        <section className="roundOf16Card">
+          <div className="roundOf16Header">
+            <div>
+              <span className="kicker">Najnovije</span>
+              <h2>Parovi osmine finala</h2>
+            </div>
+            <small>{roundOf16Matches.length} utakmica uneseno</small>
+          </div>
+
+          <div className="roundOf16Grid">
+            {roundOf16Matches.map((match) => (
+              <article className="roundOf16Match" key={match.id}>
+                <div className="roundOf16MatchTop">
+                  <span>Utakmica {match.match_number || "–"}</span>
+                  <span className={`dayMatchStatus ${match.status || "scheduled"}`}>
+                    <span className="dayMatchStatusDot" />
+                    {statusLabel(match.status)}
+                  </span>
+                </div>
+
+                <div className="roundOf16Teams">
+                  <strong>{matchName(match, "home")}</strong>
+
+                  <div className="roundOf16Score">
+                    {match.status === "finished" ? score(match) : "VS"}
+                  </div>
+
+                  <strong>{matchName(match, "away")}</strong>
+                </div>
+
+                <div className="roundOf16Time">
+                  {match.scheduled_at
+                    ? formatDate(match.scheduled_at)
+                    : "Termin naknadno"}
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+      )}
 
       <section className="bracketProgress">
         <div>
@@ -1128,12 +1188,16 @@ function TournamentBracket({ matches }) {
 
         <div className={`drawNotice ${allQualifiedKnown ? "ready" : ""}`}>
           <strong>
-            {allQualifiedKnown
-              ? "Čeka se zvanični žrijeb osmine finala."
-              : "Nakon završetka repasaža prikazat će se svih 16 ekipa."}
+            {roundOf16DrawReady
+              ? "Žrijeb osmine finala je završen — parovi su prikazani na vrhu."
+              : allQualifiedKnown
+                ? "Čeka se zvanični žrijeb osmine finala."
+                : "Nakon završetka repasaža prikazat će se svih 16 ekipa."}
           </strong>
           <span>
-            Parovi naredne faze neće se automatski određivati; unijet ćemo ih nakon zvaničnog žrijeba.
+            {roundOf16DrawReady
+              ? "Dalji tok turnira pratit će rezultate ovih utakmica."
+              : "Parovi naredne faze neće se automatski određivati; unijet ćemo ih nakon zvaničnog žrijeba."}
           </span>
         </div>
       </section>
