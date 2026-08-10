@@ -572,13 +572,33 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 
 .dayMatchRow {
   display: grid;
-  grid-template-columns: 58px minmax(0, 1fr) auto;
+  grid-template-columns: 105px minmax(0, 1fr) auto;
   align-items: center;
   gap: 10px;
   padding: 11px 10px;
   border-radius: 11px;
   background: rgba(0,0,0,.17);
   border: 1px solid rgba(255,255,255,.08);
+}
+
+.dayMatchMeta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 5px;
+}
+
+.dayMatchMeta > small {
+  display: inline-flex;
+  width: fit-content;
+  padding: 3px 7px;
+  border-radius: 999px;
+  color: #111;
+  background: linear-gradient(135deg, var(--gold-bright), var(--gold));
+  font-size: .56rem;
+  font-weight: 900;
+  line-height: 1.1;
+  text-transform: uppercase;
 }
 
 .dayMatchRow time {
@@ -1458,6 +1478,34 @@ select option { color: #111; }
   gap: 17px;
 }
 
+.adminToast {
+  position: fixed;
+  right: 22px;
+  bottom: 22px;
+  z-index: 1000;
+  width: min(420px, calc(100vw - 32px));
+  padding: 14px 16px;
+  border-radius: 12px;
+  color: #eaf8f0;
+  background: rgba(7, 35, 24, .97);
+  border: 1px solid rgba(39, 201, 120, .42);
+  box-shadow: 0 18px 55px rgba(0,0,0,.4);
+  font-size: .82rem;
+  font-weight: 800;
+  line-height: 1.45;
+}
+
+.adminCardFeatured {
+  border-color: rgba(245,199,78,.55);
+  box-shadow: 0 24px 65px rgba(0,0,0,.3), 0 0 0 1px rgba(245,199,78,.08);
+}
+
+.adminHint {
+  color: var(--muted);
+  font-size: .7rem;
+  line-height: 1.45;
+}
+
 .adminCard {
   display: grid;
   gap: 10px;
@@ -1721,6 +1769,11 @@ footer {
     gap: 20px;
   }
 
+  .adminToast {
+    right: 16px;
+    bottom: 88px;
+  }
+
   .teamCardButton {
     grid-template-columns: 58px minmax(0,1fr) 30px;
     gap: 11px;
@@ -1763,6 +1816,10 @@ footer {
     grid-template-columns: 1fr;
     gap: 10px;
     padding: 14px 12px;
+  }
+
+  .dayMatchMeta {
+    align-items: center;
   }
 
   .dayMatchRow time {

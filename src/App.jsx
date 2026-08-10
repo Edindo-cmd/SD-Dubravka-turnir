@@ -548,6 +548,7 @@ export default function App() {
             matches={matches}
             teams={teams}
             players={players}
+            goals={goals}
             reload={loadData}
             setNotice={setNotice}
           />
@@ -704,7 +705,10 @@ function DayMatchesCard({ featuredDay, onAction }) {
         <div className="dayMatchesList">
           {featuredDay.matches.map((match) => (
             <article className="dayMatchRow" key={match.id}>
-              <time><span aria-hidden="true">◷</span>{formatTime(match.scheduled_at)}</time>
+              <div className="dayMatchMeta">
+                <small>{match.round_name || "Turnir"}</small>
+                <time><span aria-hidden="true">◷</span>{formatTime(match.scheduled_at)}</time>
+              </div>
 
               <div className="dayMatchTeams">
                 <strong>{matchName(match, "home")}</strong>
@@ -1291,6 +1295,7 @@ function AdminPanel({
   matches,
   teams,
   players,
+  goals,
   reload,
   setNotice
 }) {
@@ -1313,6 +1318,21 @@ function AdminPanel({
   const [goalPlayer, setGoalPlayer] = useState("");
   const [goalName, setGoalName] = useState("");
   const [quantity, setQuantity] = useState(1);
+
+  const [newHomeTeam, setNewHomeTeam] = useState("");
+  const [newAwayTeam, setNewAwayTeam] = useState("");
+  const [newRoundName, setNewRoundName] = useState("Osmina finala");
+  const [newScheduledAt, setNewScheduledAt] = useState("");
+
+  const [editGoalId, setEditGoalId] = useState("");
+  const [editGoalQuantity, setEditGoalQuantity] = useState("");
+
+  const [actionConfirmation, setActionConfirmation] = useState("");
+
+  useEffect(() => {
+    const selectedGoal = goals.find((goal) => String(goal.id) === String(editGoalId));
+    setEditGoalQuantity(selectedGoal?.quantity ?? "");
+  }, [editGoalId, goals]);
 
   useEffect(() => {
     const selectedPlayer = players.find((player) => String(player.id) === String(editPlayerId));
@@ -1338,6 +1358,13 @@ function AdminPanel({
         <EmptyText>Supabase nije povezan.</EmptyText>
       </section>
     );
+  }
+
+  function showConfirmation(message) {
+    setActionConfirmation(message);
+    window.setTimeout(() => {
+      setActionConfirmation((current) => current === message ? "" : current);
+    }, 3200);
   }
 
   async function login(event) {
@@ -1411,8 +1438,12 @@ function AdminPanel({
       })
       .eq("id", matchId);
 
-    setNotice(error ? error.message : "Utakmica je sačuvana.");
-    if (!error) reload();
+    setNotice(error ? error.message : "");
+
+    if (!error) {
+      showConfirmation("✅ Rezultat i podaci utakmice su uspješno sačuvani.");
+      reload();
+    }
   }
 
   async function addPlayer(event) {
@@ -1425,8 +1456,10 @@ function AdminPanel({
       name: playerName
     });
 
-    setNotice(error ? error.message : "Igrač je dodan.");
+    setNotice(error ? error.message : "");
+
     if (!error) {
+      showConfirmation(`✅ Igrač ${playerName.trim()} je uspješno dodan.`);
       setPlayerName("");
       reload();
     }
@@ -1445,9 +1478,10 @@ function AdminPanel({
       .update({ name: editPlayerName.trim() })
       .eq("id", editPlayerId);
 
-    setNotice(error ? error.message : "Ime igrača je izmijenjeno.");
+    setNotice(error ? error.message : "");
 
     if (!error) {
+      showConfirmation("✅ Ime igrača je uspješno izmijenjeno.");
       setEditPlayerId("");
       setEditPlayerName("");
       reload();
@@ -1472,10 +1506,110 @@ function AdminPanel({
       quantity: Number(quantity || 1)
     });
 
-    setNotice(error ? error.message : "Strijelac je evidentiran.");
+    setNotice(error ? error.message : "");
+
     if (!error) {
+      const scorerName =
+        players.find((player) => String(player.id) === String(goalPlayer))?.name ||
+        goalName.trim() ||
+        "Strijelac";
+
+      showConfirmation(`✅ ${scorerName}: evidentirano ${Number(quantity || 1)} ${Number(quantity || 1) === 1 ? "gol" : "golova"}.`);
       setGoalName("");
       setQuantity(1);
+      reload();
+    }
+  }
+
+  async function addMatch(event) {
+    event.preventDefault();
+
+    if (!newHomeTeam || !newAwayTeam) {
+      setNotice("Izaberi obje ekipe.");
+      return;
+    }
+
+    if (String(newHomeTeam) === String(newAwayTeam)) {
+      setNotice("Ekipa ne može igrati sama protiv sebe.");
+      return;
+    }
+
+    const homeTeam = teams.find((team) => String(team.id) === String(newHomeTeam));
+    const awayTeam = teams.find((team) => String(team.id) === String(newAwayTeam));
+
+    if (!homeTeam || !awayTeam) {
+      setNotice("Nije moguće pronaći izabrane ekipe.");
+      return;
+    }
+
+    const roundOrderMap = {
+      "Prvo kolo": 1,
+      "Repasaž": 2,
+      "Osmina finala": 3,
+      "Četvrtfinale": 4,
+      "Polufinale": 5,
+      "Finale": 6
+    };
+
+    const nextMatchNumber =
+      Math.max(0, ...matches.map((match) => Number(match.match_number) || 0)) + 1;
+
+    const { error } = await supabase.from("matches").insert({
+      season_id: homeTeam.season_id,
+      match_number: nextMatchNumber,
+      round_name: newRoundName,
+      round_order: roundOrderMap[newRoundName] || 3,
+      home_team_id: homeTeam.id,
+      away_team_id: awayTeam.id,
+      status: "scheduled",
+      scheduled_at: newScheduledAt
+        ? new Date(newScheduledAt).toISOString()
+        : null
+    });
+
+    setNotice(error ? error.message : "");
+
+    if (!error) {
+      showConfirmation(
+        `✅ Dodana utakmica ${nextMatchNumber}: ${homeTeam.name} – ${awayTeam.name} (${newRoundName}).`
+      );
+      setNewHomeTeam("");
+      setNewAwayTeam("");
+      setNewScheduledAt("");
+      reload();
+    }
+  }
+
+  async function updateGoal(event) {
+    event.preventDefault();
+
+    if (!editGoalId || editGoalQuantity === "" || Number(editGoalQuantity) < 1) {
+      setNotice("Izaberi evidentiranog strijelca i upiši ispravan broj golova.");
+      return;
+    }
+
+    const selectedGoal = goals.find(
+      (goal) => String(goal.id) === String(editGoalId)
+    );
+
+    const { error } = await supabase
+      .from("goals")
+      .update({ quantity: Number(editGoalQuantity) })
+      .eq("id", editGoalId);
+
+    setNotice(error ? error.message : "");
+
+    if (!error) {
+      const scorerName =
+        selectedGoal?.player?.name ||
+        selectedGoal?.player_name_override ||
+        "Strijelac";
+
+      showConfirmation(
+        `✅ Ispravljen broj golova: ${scorerName} sada ima ${Number(editGoalQuantity)} ${Number(editGoalQuantity) === 1 ? "gol" : "golova"} u toj utakmici.`
+      );
+      setEditGoalId("");
+      setEditGoalQuantity("");
       reload();
     }
   }
@@ -1535,6 +1669,12 @@ function AdminPanel({
 
   return (
     <section className="adminArea">
+      {actionConfirmation && (
+        <div className="adminToast" role="status">
+          {actionConfirmation}
+        </div>
+      )}
+
       <div className="adminHeader">
         <div>
           <p className="kicker">Administracija</p>
@@ -1547,6 +1687,73 @@ function AdminPanel({
       </div>
 
       <div className="adminDashboardGrid">
+        <form className="adminCard adminCardFeatured" onSubmit={addMatch}>
+          <h2>➕ Nova utakmica</h2>
+
+          <label>Faza turnira</label>
+          <select
+            value={newRoundName}
+            onChange={(event) => setNewRoundName(event.target.value)}
+          >
+            <option value="Repasaž">Repasaž</option>
+            <option value="Osmina finala">Osmina finala</option>
+            <option value="Četvrtfinale">Četvrtfinale</option>
+            <option value="Polufinale">Polufinale</option>
+            <option value="Finale">Finale</option>
+          </select>
+
+          <div className="scoreInputs">
+            <div>
+              <label>Domaćin</label>
+              <select
+                value={newHomeTeam}
+                onChange={(event) => setNewHomeTeam(event.target.value)}
+                required
+              >
+                <option value="">Izaberi ekipu</option>
+                {teams
+                  .filter((team) => !team.is_placeholder)
+                  .map((team) => (
+                    <option key={team.id} value={team.id}>
+                      {team.name}
+                    </option>
+                  ))}
+              </select>
+            </div>
+
+            <div>
+              <label>Gost</label>
+              <select
+                value={newAwayTeam}
+                onChange={(event) => setNewAwayTeam(event.target.value)}
+                required
+              >
+                <option value="">Izaberi ekipu</option>
+                {teams
+                  .filter((team) => !team.is_placeholder)
+                  .map((team) => (
+                    <option key={team.id} value={team.id}>
+                      {team.name}
+                    </option>
+                  ))}
+              </select>
+            </div>
+          </div>
+
+          <label>Datum i vrijeme (opcionalno)</label>
+          <input
+            type="datetime-local"
+            value={newScheduledAt}
+            onChange={(event) => setNewScheduledAt(event.target.value)}
+          />
+
+          <small className="adminHint">
+            Broj utakmice dodjeljuje se automatski. Nakon žrijeba samo izaberi ekipe i fazu.
+          </small>
+
+          <button type="submit">Dodaj utakmicu</button>
+        </form>
+
         <form className="adminCard" onSubmit={saveMatch}>
           <h2>🏆 Rezultat i termin</h2>
 
@@ -1774,6 +1981,56 @@ function AdminPanel({
           />
 
           <button type="submit">Dodaj golove</button>
+        </form>
+
+        <form className="adminCard" onSubmit={updateGoal}>
+          <h2>✏️ Ispravi broj golova</h2>
+
+          <label>Evidentirani strijelac</label>
+          <select
+            value={editGoalId}
+            onChange={(event) => setEditGoalId(event.target.value)}
+            required
+          >
+            <option value="">Izaberi unos</option>
+            {goals
+              .slice()
+              .sort((a, b) => {
+                const matchA = matches.find((match) => String(match.id) === String(a.match_id));
+                const matchB = matches.find((match) => String(match.id) === String(b.match_id));
+                return (Number(matchB?.match_number) || 0) - (Number(matchA?.match_number) || 0);
+              })
+              .map((goal) => {
+                const goalMatchData = matches.find(
+                  (match) => String(match.id) === String(goal.match_id)
+                );
+                const scorerName =
+                  goal.player?.name ||
+                  goal.player_name_override ||
+                  "Nepoznat igrač";
+
+                return (
+                  <option key={goal.id} value={goal.id}>
+                    {scorerName} — {goal.team?.name || "Ekipa"} — utakmica {goalMatchData?.match_number || "?"} — {goal.quantity} {Number(goal.quantity) === 1 ? "gol" : "golova"}
+                  </option>
+                );
+              })}
+          </select>
+
+          <label>Ispravan broj golova</label>
+          <input
+            type="number"
+            min="1"
+            value={editGoalQuantity}
+            onChange={(event) => setEditGoalQuantity(event.target.value)}
+            required
+          />
+
+          <small className="adminHint">
+            Ovim mijenjaš samo postojeći unos strijelca; ukupna lista strijelaca se automatski preračuna.
+          </small>
+
+          <button type="submit">Sačuvaj broj golova</button>
         </form>
       </div>
     </section>
