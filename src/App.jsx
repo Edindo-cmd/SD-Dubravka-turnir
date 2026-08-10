@@ -1022,6 +1022,19 @@ function TournamentBracket({ matches }) {
         subtitle={tournamentStatus}
       />
 
+      <section className="currentPhaseProgress">
+        <div className={`phaseProgressItem current ${roundOf16Completed === 8 ? "completed" : ""}`}>
+          <div className="phaseProgressTop">
+            <span>Osmina finala</span>
+            <strong>{roundOf16Completed}/8</strong>
+          </div>
+          <div className="bracketProgressBar">
+            <span style={{ width: `${Math.min(100, (roundOf16Completed / 8) * 100)}%` }} />
+          </div>
+          <small>Završene utakmice osmine finala</small>
+        </div>
+      </section>
+
       {roundOf16DrawReady && (
         <section className="roundOf16Card">
           <div className="roundOf16Header">
@@ -1064,38 +1077,34 @@ function TournamentBracket({ matches }) {
         </section>
       )}
 
-      <section className="tournamentPhaseProgress">
-        <div className="phaseProgressItem completed">
-          <div className="phaseProgressTop">
-            <span>Prvo kolo</span>
-            <strong>{firstRoundCompleted}/11</strong>
-          </div>
-          <div className="bracketProgressBar">
-            <span style={{ width: `${Math.min(100, (firstRoundCompleted / 11) * 100)}%` }} />
-          </div>
-          <small>Završene utakmice</small>
+      <section className="completedPhasesSection">
+        <div className="completedPhasesHeader">
+          <span className="kicker">Završene faze</span>
+          <h2>Dosadašnji tok turnira</h2>
         </div>
 
-        <div className={`phaseProgressItem ${repechageCompleted === 4 ? "completed" : ""}`}>
-          <div className="phaseProgressTop">
-            <span>Repasaž</span>
-            <strong>{repechageCompleted}/4</strong>
+        <div className="completedPhasesProgress">
+          <div className="phaseProgressItem completed">
+            <div className="phaseProgressTop">
+              <span>Prvo kolo</span>
+              <strong>{firstRoundCompleted}/11</strong>
+            </div>
+            <div className="bracketProgressBar">
+              <span style={{ width: `${Math.min(100, (firstRoundCompleted / 11) * 100)}%` }} />
+            </div>
+            <small>Završene utakmice</small>
           </div>
-          <div className="bracketProgressBar">
-            <span style={{ width: `${Math.min(100, (repechageCompleted / 4) * 100)}%` }} />
-          </div>
-          <small>Završene utakmice</small>
-        </div>
 
-        <div className={`phaseProgressItem current ${roundOf16Completed === 8 ? "completed" : ""}`}>
-          <div className="phaseProgressTop">
-            <span>Osmina finala</span>
-            <strong>{roundOf16Completed}/8</strong>
+          <div className={`phaseProgressItem ${repechageCompleted === 4 ? "completed" : ""}`}>
+            <div className="phaseProgressTop">
+              <span>Repasaž</span>
+              <strong>{repechageCompleted}/4</strong>
+            </div>
+            <div className="bracketProgressBar">
+              <span style={{ width: `${Math.min(100, (repechageCompleted / 4) * 100)}%` }} />
+            </div>
+            <small>Završene utakmice</small>
           </div>
-          <div className="bracketProgressBar">
-            <span style={{ width: `${Math.min(100, (roundOf16Completed / 8) * 100)}%` }} />
-          </div>
-          <small>Završene utakmice</small>
         </div>
       </section>
 

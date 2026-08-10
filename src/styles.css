@@ -1013,11 +1013,32 @@ button:focus-visible, input:focus-visible, select:focus-visible {
   text-align: center;
 }
 
-.tournamentPhaseProgress {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 11px;
+.currentPhaseProgress {
+  margin-bottom: 16px;
+}
+
+.completedPhasesSection {
+  margin-top: 20px;
   margin-bottom: 20px;
+  padding: 18px;
+  border-radius: 16px;
+  background: linear-gradient(145deg, rgba(8,22,34,.88), rgba(4,14,23,.95));
+  border: 1px solid rgba(255,255,255,.075);
+}
+
+.completedPhasesHeader {
+  margin-bottom: 13px;
+}
+
+.completedPhasesHeader h2 {
+  margin: 4px 0 0;
+  font-size: 1rem;
+}
+
+.completedPhasesProgress {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0,1fr));
+  gap: 11px;
 }
 
 .phaseProgressItem {
@@ -2015,7 +2036,7 @@ footer {
   .featuredScore strong { font-size: 1.35rem; }
   .pageHeading h1 { font-size: 2.15rem; }
 
-  .tournamentPhaseProgress {
+  .completedPhasesProgress {
     grid-template-columns: 1fr;
   }
 
